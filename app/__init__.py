@@ -3,6 +3,10 @@ from flask import Flask, jsonify
 from app.config import config_by_name
 from app.extensions import db, migrate, jwt, cors
 from app.routes.auth import auth_bp
+from app.routes.company import company_bp
+from app.routes.contact import contact_bp
+from app.routes.activity import activity_bp
+from app.routes.dashboard import dashboard_bp
 
 
 def create_app(config_name=None):
@@ -71,6 +75,10 @@ def create_app(config_name=None):
 
     # Registrar Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(company_bp, url_prefix="/api/companies")
+    app.register_blueprint(contact_bp, url_prefix="/api/contacts")
+    app.register_blueprint(activity_bp, url_prefix="/api/contacts")
+    app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
 
     # Endpoint de Health Check
     @app.route("/health", methods=["GET"])
