@@ -3,6 +3,9 @@ from app.models.user import User, UserRole
 from app.models.company import Company
 from app.models.contact import Contact
 from app.models.activity_log import ActivityLog, ActivityType
+from app.models.category import Category
+from app.models.subscription import Subscription
+from app.models.transaction import Transaction
 
 __all__ = [
     "Tenant",
@@ -12,4 +15,7 @@ __all__ = [
     "Contact",
     "ActivityLog",
     "ActivityType",
+    "Category",
+    "Subscription",
+    "Transaction",
 ]

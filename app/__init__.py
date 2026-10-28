@@ -7,6 +7,10 @@ from app.routes.company import company_bp
 from app.routes.contact import contact_bp
 from app.routes.activity import activity_bp
 from app.routes.dashboard import dashboard_bp
+from app.routes.category import category_bp
+from app.routes.subscription import subscription_bp
+from app.routes.transaction import transaction_bp
+from app.routes.finance_summary import finance_summary_bp
 
 
 def create_app(config_name=None):
@@ -79,6 +83,10 @@ def create_app(config_name=None):
     app.register_blueprint(contact_bp, url_prefix="/api/contacts")
     app.register_blueprint(activity_bp, url_prefix="/api/contacts")
     app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
+    app.register_blueprint(category_bp, url_prefix="/api/finance/categories")
+    app.register_blueprint(subscription_bp, url_prefix="/api/finance/subscriptions")
+    app.register_blueprint(transaction_bp, url_prefix="/api/finance/transactions")
+    app.register_blueprint(finance_summary_bp, url_prefix="/api/finance/summary")
 
     # Endpoint de Health Check
     @app.route("/health", methods=["GET"])
