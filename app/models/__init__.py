@@ -6,6 +6,8 @@ from app.models.activity_log import ActivityLog, ActivityType
 from app.models.category import Category
 from app.models.subscription import Subscription
 from app.models.transaction import Transaction
+from app.models.stage import Stage, DEFAULT_STAGES
+from app.models.deal import Deal
 
 __all__ = [
     "Tenant",
@@ -18,4 +20,7 @@ __all__ = [
     "Category",
     "Subscription",
     "Transaction",
+    "Stage",
+    "DEFAULT_STAGES",
+    "Deal",
 ]

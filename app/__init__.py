@@ -11,6 +11,9 @@ from app.routes.category import category_bp
 from app.routes.subscription import subscription_bp
 from app.routes.transaction import transaction_bp
 from app.routes.finance_summary import finance_summary_bp
+from app.routes.stage import stage_bp
+from app.routes.deal_forecast import deal_forecast_bp
+from app.routes.deal import deal_bp
 
 
 def create_app(config_name=None):
@@ -87,6 +90,9 @@ def create_app(config_name=None):
     app.register_blueprint(subscription_bp, url_prefix="/api/finance/subscriptions")
     app.register_blueprint(transaction_bp, url_prefix="/api/finance/transactions")
     app.register_blueprint(finance_summary_bp, url_prefix="/api/finance/summary")
+    app.register_blueprint(stage_bp, url_prefix="/api/deals/stages")
+    app.register_blueprint(deal_forecast_bp, url_prefix="/api/deals/forecast")
+    app.register_blueprint(deal_bp, url_prefix="/api/deals")
 
     # Endpoint de Health Check
     @app.route("/health", methods=["GET"])
