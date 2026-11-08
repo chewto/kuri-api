@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.stage import Stage, DEFAULT_STAGES
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 stage_bp = Blueprint("stages", __name__)
 
@@ -194,6 +195,7 @@ def update_stage(stage_id):
 
 @stage_bp.route("/<stage_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_stage(stage_id):
     """Elimina una etapa si no contiene tratos vinculados."""
     stage = Stage.query.filter_by(id=stage_id, tenant_id=g.tenant_id).first()

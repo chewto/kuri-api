@@ -1,4 +1,6 @@
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, g
+from sqlalchemy import func
 from app.extensions import db
 from app.models.contact import Contact
 from app.models.activity_log import ActivityLog, ActivityType
@@ -60,12 +62,35 @@ def create_contact_activity(contact_id):
             400,
         )
 
+    # El reloj del sistema puede tener resolución de milisegundos y devolver
+    # el mismo instante para dos actividades consecutivas. Garantizamos que
+    # cada nueva actividad tenga un timestamp estrictamente mayor que la
+    # última del contacto para que la línea de tiempo sea determinista.
+    created_at = datetime.now(timezone.utc)
+    latest_created_at = (
+        db.session.query(func.max(ActivityLog.created_at))
+        .filter(
+            ActivityLog.contact_id == contact.id,
+            ActivityLog.tenant_id == g.tenant_id,
+        )
+        .scalar()
+    )
+    if latest_created_at is not None:
+        candidate = (
+            created_at.replace(tzinfo=None)
+            if latest_created_at.tzinfo is None
+            else created_at
+        )
+        if candidate <= latest_created_at:
+            created_at = latest_created_at + timedelta(microseconds=1)
+
     activity = ActivityLog(
         tenant_id=g.tenant_id,
         contact_id=contact.id,
         user_id=g.current_user_id,
         type=ActivityType(activity_type_str),
         content=content,
+        created_at=created_at,
     )
 
     try:

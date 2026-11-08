@@ -6,6 +6,7 @@ from app.models.transaction import Transaction
 from app.models.company import Company
 from app.models.category import Category
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 transaction_bp = Blueprint("finance_transactions", __name__)
 
@@ -253,6 +254,7 @@ def create_transaction():
 
 @transaction_bp.route("/<string:transaction_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_transaction(transaction_id):
     """Elimina una transacción garantizando aislamiento de Tenant."""
     transaction = Transaction.query.filter_by(id=transaction_id, tenant_id=g.tenant_id).first()

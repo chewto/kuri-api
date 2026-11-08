@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.company import Company
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 company_bp = Blueprint("companies", __name__)
 
@@ -173,6 +174,7 @@ def update_company(company_id):
 
 @company_bp.route("/<string:company_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_company(company_id):
     """Elimina la empresa asegurando aislamiento de Tenant."""
     company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()

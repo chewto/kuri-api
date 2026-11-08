@@ -6,6 +6,7 @@ from app.models.subscription import Subscription
 from app.models.company import Company
 from app.models.category import Category
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 subscription_bp = Blueprint("finance_subscriptions", __name__)
 
@@ -356,6 +357,7 @@ def update_subscription(subscription_id):
 
 @subscription_bp.route("/<string:subscription_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_subscription(subscription_id):
     """Elimina una suscripción garantizando aislamiento de Tenant."""
     subscription = Subscription.query.filter_by(id=subscription_id, tenant_id=g.tenant_id).first()

@@ -7,6 +7,8 @@ from app.routes.category import category_bp
 from app.routes.subscription import subscription_bp
 from app.routes.transaction import transaction_bp
 from app.routes.finance_summary import finance_summary_bp
+from app.routes.team import team_bp
+from app.routes.analytics import analytics_bp
 
 __all__ = [
     "auth_bp",
@@ -18,4 +20,6 @@ __all__ = [
     "subscription_bp",
     "transaction_bp",
     "finance_summary_bp",
+    "team_bp",
+    "analytics_bp",
 ]

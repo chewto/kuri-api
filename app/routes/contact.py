@@ -4,6 +4,7 @@ from app.extensions import db
 from app.models.contact import Contact
 from app.models.company import Company
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 contact_bp = Blueprint("contacts", __name__)
 
@@ -201,6 +202,7 @@ def update_contact(contact_id):
 
 @contact_bp.route("/<string:contact_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_contact(contact_id):
     """Elimina el contacto asegurando aislamiento por Tenant."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()

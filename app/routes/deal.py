@@ -7,6 +7,7 @@ from app.models.stage import Stage
 from app.models.company import Company
 from app.models.contact import Contact
 from app.middlewares.tenant_context import tenant_required
+from app.middlewares.rbac import roles_required
 
 deal_bp = Blueprint("deals", __name__)
 
@@ -538,6 +539,7 @@ def move_deal(deal_id):
 
 @deal_bp.route("/<deal_id>", methods=["DELETE"])
 @tenant_required
+@roles_required(["TenantAdmin"])
 def delete_deal(deal_id):
     """Elimina una oportunidad de venta."""
     deal = Deal.query.filter_by(id=deal_id, tenant_id=g.tenant_id).first()
