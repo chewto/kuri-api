@@ -4,7 +4,7 @@ Backend Flask del CRM multi-tenant. Usa PostgreSQL como base de datos.
 
 ## Requisitos
 
-- Python 3.11
+- Python 3.11 (en Render se fija con `.python-version` y `PYTHON_VERSION=3.11.11`)
 - PostgreSQL 16+ (Docker Compose o instalación local)
 - Docker Desktop (opcional, recomendado)
 
