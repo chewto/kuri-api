@@ -5,8 +5,11 @@ services:
     region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn wsgi:app"
+    # Render free no soporta preDeployCommand; las migraciones se aplican al iniciar.
+    startCommand: "flask db upgrade && gunicorn wsgi:app"
     envVars:
+      - key: FLASK_APP
+        value: wsgi.py
       - key: FLASK_ENV
         value: production
       - key: PYTHON_VERSION

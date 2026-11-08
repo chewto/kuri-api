@@ -71,3 +71,7 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_stages_tenant_id'))
 
     op.drop_table('stages')
+
+    # El enum nativo de PostgreSQL no lo elimina Alembic al borrar la tabla.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute('DROP TYPE IF EXISTS deal_status_enum')

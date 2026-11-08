@@ -49,7 +49,13 @@ class Deal(db.Model):
 
     # Relaciones
     tenant = db.relationship("Tenant")
-    company = db.relationship("Company", backref=db.backref("deals", lazy="dynamic"))
+    # PostgreSQL aplica ON DELETE CASCADE sobre companies -> deals. Con
+    # passive_deletes se evita que el ORM intente poner company_id=NULL en una
+    # columna NOT NULL antes de que actúe la FK.
+    company = db.relationship(
+        "Company",
+        backref=db.backref("deals", lazy="dynamic", passive_deletes=True),
+    )
     contact = db.relationship("Contact", backref=db.backref("deals", lazy="dynamic"))
     stage = db.relationship("Stage", back_populates="deals")
 

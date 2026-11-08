@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crm_dev
+      POSTGRES_USER: crm_user
+      POSTGRES_PASSWORD: crm_password
+    # 5433 en el host para no chocar con un PostgreSQL local ya instalado.
+    ports:
+      - "5433:5432"
+    volumes:
+      - crm_pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_user -d crm_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  crm_pgdata:
