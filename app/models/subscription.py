@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Subscription(db.Model):
-    """Modelo de Suscripción de Software / Servicio recurrente (SaaS/OPEX)."""
+    """Recurring software or service subscription (SaaS/OPEX)."""
 
     __tablename__ = "subscriptions"
 
@@ -46,7 +46,7 @@ class Subscription(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     company = db.relationship("Company", backref=db.backref("subscriptions", lazy="dynamic"))
     category = db.relationship("Category", backref=db.backref("subscriptions", lazy="dynamic"))

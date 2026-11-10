@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Tenant(db.Model):
-    """Modelo representativo de una organización o Tenant en la arquitectura Multi-Tenant."""
+    """An organization or tenant in the multi-tenant architecture."""
 
     __tablename__ = "tenants"
 
@@ -18,7 +18,7 @@ class Tenant(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relación uno-a-muchos con usuarios del Tenant
+    # One-to-many relationship with workspace users
     users = db.relationship("User", back_populates="tenant", cascade="all, delete-orphan", lazy="dynamic")
 
     def __repr__(self):

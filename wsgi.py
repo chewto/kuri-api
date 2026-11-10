@@ -9,7 +9,7 @@ app = create_app(environment)
 
 @app.shell_context_processor
 def make_shell_context():
-    """Permite el acceso a modelos y db en la consola interactiva 'flask shell'."""
+    """Expose models and db to the interactive 'flask shell' console."""
     return {"db": db, "Tenant": Tenant, "User": User, "UserRole": UserRole}
 
 

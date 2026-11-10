@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Contact(db.Model):
-    """Modelo de Contacto corporativo perteneciente a un Tenant específico."""
+    """Corporate contact belonging to a specific workspace."""
 
     __tablename__ = "contacts"
 
@@ -32,7 +32,7 @@ class Contact(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     company = db.relationship("Company", back_populates="contacts")
     activities = db.relationship(

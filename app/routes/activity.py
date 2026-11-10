@@ -12,11 +12,11 @@ activity_bp = Blueprint("activities", __name__)
 @activity_bp.route("/<string:contact_id>/activities", methods=["GET"])
 @tenant_required
 def get_contact_activities(contact_id):
-    """Lista la línea de tiempo de notas/interacciones del contacto."""
+    """Lists the contact's notes and interaction timeline."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()
     if not contact:
         return (
-            jsonify({"error": "No encontrado", "message": "Contacto no encontrado en su organización."}),
+            jsonify({"error": "Not found", "message": "Contact not found in your organization."}),
             404,
         )
 
@@ -32,11 +32,11 @@ def get_contact_activities(contact_id):
 @activity_bp.route("/<string:contact_id>/activities", methods=["POST"])
 @tenant_required
 def create_contact_activity(contact_id):
-    """Registra una nueva interacción (Llamada, Nota, Correo, Reunión) del usuario actual."""
+    """Logs a new interaction (call, note, email, or meeting) for the current user."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()
     if not contact:
         return (
-            jsonify({"error": "No encontrado", "message": "Contacto no encontrado en su organización."}),
+            jsonify({"error": "Not found", "message": "Contact not found in your organization."}),
             404,
         )
 
@@ -46,7 +46,7 @@ def create_contact_activity(contact_id):
 
     if not content:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'content' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'content' field is required."}),
             400,
         )
 
@@ -55,17 +55,17 @@ def create_contact_activity(contact_id):
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": f"Tipo de actividad inválido. Debe ser uno de: {', '.join(valid_types)}",
+                    "error": "Validation failed",
+                    "message": f"Invalid activity type. Must be one of: {', '.join(valid_types)}",
                 }
             ),
             400,
         )
 
-    # El reloj del sistema puede tener resolución de milisegundos y devolver
-    # el mismo instante para dos actividades consecutivas. Garantizamos que
-    # cada nueva actividad tenga un timestamp estrictamente mayor que la
-    # última del contacto para que la línea de tiempo sea determinista.
+    # The system clock may have millisecond resolution and return
+    # the same instant for two consecutive activities. We guarantee that
+    # each new activity has a timestamp strictly greater than the
+    # contact's latest activity so the timeline is deterministic.
     created_at = datetime.now(timezone.utc)
     latest_created_at = (
         db.session.query(func.max(ActivityLog.created_at))
@@ -99,7 +99,7 @@ def create_contact_activity(contact_id):
         return (
             jsonify(
                 {
-                    "message": "Actividad registrada exitosamente.",
+                    "message": "Activity logged successfully.",
                     "activity": activity.to_dict(),
                 }
             ),
@@ -108,6 +108,6 @@ def create_contact_activity(contact_id):
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo registrar la actividad: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not log the activity: {str(exc)}"}),
             500,
         )

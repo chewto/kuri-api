@@ -3,17 +3,17 @@ from datetime import datetime, timezone
 from app.extensions import db
 
 DEFAULT_STAGES = [
-    {"name": "Prospección", "order": 1, "probability": 10},
-    {"name": "Calificado", "order": 2, "probability": 25},
-    {"name": "Propuesta Enviada", "order": 3, "probability": 50},
-    {"name": "Negociación", "order": 4, "probability": 75},
-    {"name": "Cerrado Ganado", "order": 5, "probability": 100},
-    {"name": "Cerrado Perdido", "order": 6, "probability": 0},
+    {"name": "Prospecting", "order": 1, "probability": 10},
+    {"name": "Qualified", "order": 2, "probability": 25},
+    {"name": "Proposal Sent", "order": 3, "probability": 50},
+    {"name": "Negotiation", "order": 4, "probability": 75},
+    {"name": "Closed Won", "order": 5, "probability": 100},
+    {"name": "Closed Lost", "order": 6, "probability": 0},
 ]
 
 
 class Stage(db.Model):
-    """Modelo de Etapa del Embudo de Ventas (Pipeline Stage) de un Tenant."""
+    """Sales pipeline stage belonging to a workspace."""
 
     __tablename__ = "stages"
 
@@ -33,7 +33,7 @@ class Stage(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     deals = db.relationship(
         "Deal",

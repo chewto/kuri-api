@@ -12,7 +12,7 @@ contact_bp = Blueprint("contacts", __name__)
 @contact_bp.route("", methods=["GET"])
 @tenant_required
 def get_contacts():
-    """Lista contactos del tenant_id con soporte de búsqueda por nombre/email y filtro por company_id."""
+    """Lists contacts in the current workspace with name/email search and company_id filtering."""
     search = request.args.get("search", "").strip()
     company_id = request.args.get("company_id", "").strip()
 
@@ -58,27 +58,27 @@ def get_contacts():
 @contact_bp.route("", methods=["POST"])
 @tenant_required
 def create_contact():
-    """Crea un contacto asociado al tenant_id."""
+    """Creates a contact associated with the current workspace."""
     data = request.get_json(silent=True) or {}
     first_name = data.get("first_name", "").strip()
 
     if not first_name:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'first_name' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'first_name' field is required."}),
             400,
         )
 
     company_id = data.get("company_id")
     if company_id:
         company_id = company_id.strip()
-        # Validar que la empresa exista y pertenezca al mismo tenant
+        # Verify that the company exists and belongs to the same workspace
         company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()
         if not company:
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La empresa especificada no existe en su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified company does not exist in your organization.",
                     }
                 ),
                 400,
@@ -102,7 +102,7 @@ def create_contact():
         return (
             jsonify(
                 {
-                    "message": "Contacto creado exitosamente.",
+                    "message": "Contact created successfully.",
                     "contact": contact.to_dict(),
                 }
             ),
@@ -111,7 +111,7 @@ def create_contact():
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo crear el contacto: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not create the contact: {str(exc)}"}),
             500,
         )
 
@@ -119,11 +119,11 @@ def create_contact():
 @contact_bp.route("/<string:contact_id>", methods=["GET"])
 @tenant_required
 def get_contact(contact_id):
-    """Obtiene el detalle del contacto."""
+    """Returns the contact's details."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()
     if not contact:
         return (
-            jsonify({"error": "No encontrado", "message": "Contacto no encontrado en su organización."}),
+            jsonify({"error": "Not found", "message": "Contact not found in your organization."}),
             404,
         )
 
@@ -133,11 +133,11 @@ def get_contact(contact_id):
 @contact_bp.route("/<string:contact_id>", methods=["PUT"])
 @tenant_required
 def update_contact(contact_id):
-    """Actualiza los datos del contacto."""
+    """Updates the contact's details."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()
     if not contact:
         return (
-            jsonify({"error": "No encontrado", "message": "Contacto no encontrado en su organización."}),
+            jsonify({"error": "Not found", "message": "Contact not found in your organization."}),
             404,
         )
 
@@ -147,7 +147,7 @@ def update_contact(contact_id):
         first_name = first_name.strip()
         if not first_name:
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'first_name' no puede estar vacío."}),
+                jsonify({"error": "Validation failed", "message": "The 'first_name' field cannot be empty."}),
                 400,
             )
         contact.first_name = first_name
@@ -156,14 +156,14 @@ def update_contact(contact_id):
         new_company_id = data["company_id"]
         if new_company_id:
             new_company_id = str(new_company_id).strip()
-            # Validar que la nueva empresa pertenezca al mismo tenant
+            # Verify that the new company belongs to the same workspace
             company = Company.query.filter_by(id=new_company_id, tenant_id=g.tenant_id).first()
             if not company:
                 return (
                     jsonify(
                         {
-                            "error": "Validación fallida",
-                            "message": "La empresa especificada no existe en su organización.",
+                            "error": "Validation failed",
+                            "message": "The specified company does not exist in your organization.",
                         }
                     ),
                     400,
@@ -186,7 +186,7 @@ def update_contact(contact_id):
         return (
             jsonify(
                 {
-                    "message": "Contacto actualizado exitosamente.",
+                    "message": "Contact updated successfully.",
                     "contact": contact.to_dict(),
                 }
             ),
@@ -195,7 +195,7 @@ def update_contact(contact_id):
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo actualizar el contacto: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not update the contact: {str(exc)}"}),
             500,
         )
 
@@ -204,21 +204,21 @@ def update_contact(contact_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_contact(contact_id):
-    """Elimina el contacto asegurando aislamiento por Tenant."""
+    """Deletes the contact while enforcing workspace isolation."""
     contact = Contact.query.filter_by(id=contact_id, tenant_id=g.tenant_id).first()
     if not contact:
         return (
-            jsonify({"error": "No encontrado", "message": "Contacto no encontrado en su organización."}),
+            jsonify({"error": "Not found", "message": "Contact not found in your organization."}),
             404,
         )
 
     try:
         db.session.delete(contact)
         db.session.commit()
-        return jsonify({"message": "Contacto eliminado exitosamente."}), 200
+        return jsonify({"message": "Contact deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo eliminar el contacto: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not delete the contact: {str(exc)}"}),
             500,
         )

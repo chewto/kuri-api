@@ -17,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    # 1. Crear tabla stages
+    # 1. Create the stages table
     op.create_table(
         'stages',
         sa.Column('id', sa.String(length=36), nullable=False),
@@ -32,7 +32,7 @@ def upgrade():
     with op.batch_alter_table('stages', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_stages_tenant_id'), ['tenant_id'], unique=False)
 
-    # 2. Crear tabla deals
+    # 2. Create the deals table
     op.create_table(
         'deals',
         sa.Column('id', sa.String(length=36), nullable=False),
@@ -71,3 +71,7 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_stages_tenant_id'))
 
     op.drop_table('stages')
+
+    # Alembic does not drop the native PostgreSQL enum when the table is dropped.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute('DROP TYPE IF EXISTS deal_status_enum')

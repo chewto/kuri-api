@@ -14,7 +14,7 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         self.app_context.push()
         db.create_all()
 
-        # Configurar dos Tenants para probar aislamiento Multi-Tenant
+        # Set up two tenants to test Multi-Tenant isolation
         self.token_tenant_a = self._create_tenant_and_get_token("Tenant A", "admin_a@tenant-a.com")
         self.token_tenant_b = self._create_tenant_and_get_token("Tenant B", "admin_b@tenant-b.com")
 
@@ -38,61 +38,61 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         return {"Authorization": f"Bearer {token}"}
 
     # ==========================================
-    # TESTS PARA COMPANY
+    # COMPANY TESTS
     # ==========================================
     def test_company_crud_and_isolation(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # 1. Crear Company en Tenant A
+        # 1. Create a company in Tenant A
         create_payload = {
-            "name": "Empresa Alfa",
+            "name": "Alpha Company",
             "tax_id": "J-12345678-9",
-            "industry": "Tecnología",
-            "website": "https://alfa.com",
+            "industry": "Technology",
+            "website": "https://alpha.com",
             "phone": "+584120000000",
         }
         res = self.client.post("/api/companies", json=create_payload, headers=headers_a)
         self.assertEqual(res.status_code, 201)
         company_a = res.get_json()["company"]
         company_a_id = company_a["id"]
-        self.assertEqual(company_a["name"], "Empresa Alfa")
+        self.assertEqual(company_a["name"], "Alpha Company")
         self.assertEqual(company_a["tax_id"], "J-12345678-9")
 
-        # 2. Listar Company en Tenant A -> debe aparecer
+        # 2. List companies in Tenant A -> it should appear
         res = self.client.get("/api/companies", headers=headers_a)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data["total"], 1)
-        self.assertEqual(data["items"][0]["name"], "Empresa Alfa")
+        self.assertEqual(data["items"][0]["name"], "Alpha Company")
 
-        # 3. Listar Company en Tenant B -> NO debe aparecer (aislamiento)
+        # 3. List companies in Tenant B -> it must NOT appear (isolation)
         res_b = self.client.get("/api/companies", headers=headers_b)
         self.assertEqual(res_b.status_code, 200)
         data_b = res_b.get_json()
         self.assertEqual(data_b["total"], 0)
         self.assertEqual(len(data_b["items"]), 0)
 
-        # 4. Tenant B intenta consultar detalle de Company de Tenant A -> 404
+        # 4. Tenant B tries to fetch a Tenant A company detail -> 404
         res_b_get = self.client.get(f"/api/companies/{company_a_id}", headers=headers_b)
         self.assertEqual(res_b_get.status_code, 404)
 
-        # 5. Tenant A consulta detalle con contactos
+        # 5. Tenant A fetches the detail with contacts
         res_a_get = self.client.get(f"/api/companies/{company_a_id}", headers=headers_a)
         self.assertEqual(res_a_get.status_code, 200)
         self.assertIn("contacts", res_a_get.get_json()["company"])
 
-        # 6. Actualizar Company en Tenant A
+        # 6. Update a company in Tenant A
         res_update = self.client.put(
             f"/api/companies/{company_a_id}",
-            json={"name": "Empresa Alfa Modificada", "industry": "Finanzas"},
+            json={"name": "Modified Alpha Company", "industry": "Finance"},
             headers=headers_a,
         )
         self.assertEqual(res_update.status_code, 200)
-        self.assertEqual(res_update.get_json()["company"]["name"], "Empresa Alfa Modificada")
-        self.assertEqual(res_update.get_json()["company"]["industry"], "Finanzas")
+        self.assertEqual(res_update.get_json()["company"]["name"], "Modified Alpha Company")
+        self.assertEqual(res_update.get_json()["company"]["industry"], "Finance")
 
-        # 7. Tenant B intenta modificar Company de Tenant A -> 404
+        # 7. Tenant B tries to update a Tenant A company -> 404
         res_b_update = self.client.put(
             f"/api/companies/{company_a_id}",
             json={"name": "Hacked"},
@@ -100,28 +100,28 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         )
         self.assertEqual(res_b_update.status_code, 404)
 
-        # 8. Eliminar Company en Tenant A
+        # 8. Delete a company in Tenant A
         res_del = self.client.delete(f"/api/companies/{company_a_id}", headers=headers_a)
         self.assertEqual(res_del.status_code, 200)
 
-        # Confirmar borrado
+        # Confirm deletion
         res_check = self.client.get(f"/api/companies/{company_a_id}", headers=headers_a)
         self.assertEqual(res_check.status_code, 404)
 
     def test_company_search_and_pagination(self):
         headers_a = self._headers(self.token_tenant_a)
 
-        # Crear múltiples empresas
+        # Create multiple companies
         for i in range(1, 16):
-            name = f"Inversiones {i}" if i <= 10 else f"Comercializadora {i}"
+            name = f"Investments {i}" if i <= 10 else f"Trading Co {i}"
             self.client.post("/api/companies", json={"name": name}, headers=headers_a)
 
-        # Búsqueda por "Inversiones"
-        res_search = self.client.get("/api/companies?search=Inversiones", headers=headers_a)
+        # Search by "Investments"
+        res_search = self.client.get("/api/companies?search=Investments", headers=headers_a)
         self.assertEqual(res_search.status_code, 200)
         self.assertEqual(res_search.get_json()["total"], 10)
 
-        # Paginación
+        # Pagination
         res_page = self.client.get("/api/companies?page=1&per_page=5", headers=headers_a)
         self.assertEqual(res_page.status_code, 200)
         data = res_page.get_json()
@@ -135,7 +135,7 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         for i in range(1, 4):
             self.client.post("/api/companies", json={"name": f"Select Co {i}"}, headers=headers_a)
 
-        # all=1 ignora per_page y devuelve todas las empresas
+        # all=1 ignores per_page and returns every company
         res_all = self.client.get("/api/companies?all=1&per_page=1", headers=headers_a)
         self.assertEqual(res_all.status_code, 200)
         data = res_all.get_json()
@@ -143,22 +143,22 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         self.assertEqual(len(data["items"]), 3)
         self.assertEqual(data["pages"], 1)
 
-        # Orden alfabético para selects
+        # Alphabetical order for selects
         names = [c["name"] for c in data["items"]]
         self.assertEqual(names, sorted(names))
 
-        # all=1 sigue respetando el filtro search
+        # all=1 still respects the search filter
         res_search = self.client.get("/api/companies?all=1&search=Select Co 2", headers=headers_a)
         self.assertEqual(res_search.get_json()["total"], 1)
 
-        # Sin all=1 la paginación sigue intacta
+        # Without all=1, pagination remains unchanged
         res_page = self.client.get("/api/companies?per_page=2", headers=headers_a)
         self.assertEqual(len(res_page.get_json()["items"]), 2)
 
     def test_delete_company_keeps_contacts_with_null_company(self):
         headers_a = self._headers(self.token_tenant_a)
 
-        res_c = self.client.post("/api/companies", json={"name": "Empresa Borrable"}, headers=headers_a)
+        res_c = self.client.post("/api/companies", json={"name": "Deletable Company"}, headers=headers_a)
         company_id = res_c.get_json()["company"]["id"]
 
         res_ct = self.client.post(
@@ -172,7 +172,7 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         res_del = self.client.delete(f"/api/companies/{company_id}", headers=headers_a)
         self.assertEqual(res_del.status_code, 200)
 
-        # El contacto sobrevive y su company_id queda en NULL
+        # The contact survives and its company_id is set to NULL
         res_check = self.client.get(f"/api/contacts/{contact_id}", headers=headers_a)
         self.assertEqual(res_check.status_code, 200)
         contact = res_check.get_json()["contact"]
@@ -181,20 +181,20 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         self.assertIsNone(contact["company_name"])
 
     # ==========================================
-    # TESTS PARA CONTACT
+    # CONTACT TESTS
     # ==========================================
     def test_contact_crud_and_cross_tenant_protection(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # Crear empresa en Tenant A y en Tenant B
+        # Create a company in Tenant A and Tenant B
         res_ca = self.client.post("/api/companies", json={"name": "Company A"}, headers=headers_a)
         comp_a_id = res_ca.get_json()["company"]["id"]
 
         res_cb = self.client.post("/api/companies", json={"name": "Company B"}, headers=headers_b)
         comp_b_id = res_cb.get_json()["company"]["id"]
 
-        # 1. Tenant A intenta crear contacto asociándolo a una empresa de Tenant B -> 400
+        # 1. Tenant A tries to create a contact linked to a Tenant B company -> 400
         res_cross = self.client.post(
             "/api/contacts",
             json={"first_name": "Pedro", "last_name": "Perez", "company_id": comp_b_id},
@@ -202,7 +202,7 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         )
         self.assertEqual(res_cross.status_code, 400)
 
-        # 2. Tenant A crea contacto legítimo asociado a Company A
+        # 2. Tenant A creates a legitimate contact linked to Company A
         res_contact = self.client.post(
             "/api/contacts",
             json={
@@ -210,7 +210,7 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
                 "last_name": "Perez",
                 "email": "pedro@companya.com",
                 "phone": "+584141112233",
-                "position": "Gerente de Compras",
+                "position": "Purchasing Manager",
                 "company_id": comp_a_id,
             },
             headers=headers_a,
@@ -219,107 +219,107 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         contact_id = res_contact.get_json()["contact"]["id"]
         self.assertEqual(res_contact.get_json()["contact"]["company_name"], "Company A")
 
-        # 3. Filtrar contactos por company_id
+        # 3. Filter contacts by company_id
         res_filter = self.client.get(f"/api/contacts?company_id={comp_a_id}", headers=headers_a)
         self.assertEqual(res_filter.status_code, 200)
         self.assertEqual(res_filter.get_json()["total"], 1)
 
-        # 4. Búsqueda por email o nombre
+        # 4. Search by email or name
         res_search = self.client.get("/api/contacts?search=pedro@companya.com", headers=headers_a)
         self.assertEqual(res_search.status_code, 200)
         self.assertEqual(res_search.get_json()["total"], 1)
 
-        # 5. Tenant B no puede ver contacto de Tenant A
+        # 5. Tenant B cannot see a Tenant A contact
         res_b_get = self.client.get(f"/api/contacts/{contact_id}", headers=headers_b)
         self.assertEqual(res_b_get.status_code, 404)
 
-        # 6. Actualizar contacto en Tenant A
+        # 6. Update the contact in Tenant A
         res_upd = self.client.put(
             f"/api/contacts/{contact_id}",
-            json={"position": "Director de Operaciones"},
+            json={"position": "Operations Director"},
             headers=headers_a,
         )
         self.assertEqual(res_upd.status_code, 200)
-        self.assertEqual(res_upd.get_json()["contact"]["position"], "Director de Operaciones")
+        self.assertEqual(res_upd.get_json()["contact"]["position"], "Operations Director")
 
-        # 7. Verificar que Company A incluye a Pedro en su detalle
+        # 7. Verify that Company A includes Pedro in its detail
         res_comp_detail = self.client.get(f"/api/companies/{comp_a_id}", headers=headers_a)
         contacts_in_comp = res_comp_detail.get_json()["company"]["contacts"]
         self.assertEqual(len(contacts_in_comp), 1)
         self.assertEqual(contacts_in_comp[0]["id"], contact_id)
 
     # ==========================================
-    # TESTS PARA ACTIVITYLOG
+    # ACTIVITY LOG TESTS
     # ==========================================
     def test_contact_activities_timeline_and_isolation(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # Crear contacto en Tenant A
+        # Create a contact in Tenant A
         res_c = self.client.post("/api/contacts", json={"first_name": "Maria", "last_name": "Lopez"}, headers=headers_a)
         contact_id = res_c.get_json()["contact"]["id"]
 
-        # 1. Registrar actividades válidas
+        # 1. Register valid activities
         act1 = self.client.post(
             f"/api/contacts/{contact_id}/activities",
-            json={"type": "call", "content": "Primera llamada exploratoria."},
+            json={"type": "call", "content": "First exploratory call."},
             headers=headers_a,
         )
         self.assertEqual(act1.status_code, 201)
         act1_data = act1.get_json()["activity"]
         self.assertEqual(act1_data["type"], "call")
-        self.assertEqual(act1_data["content"], "Primera llamada exploratoria.")
+        self.assertEqual(act1_data["content"], "First exploratory call.")
         self.assertEqual(act1_data["user_email"], "admin_a@tenant-a.com")
 
         act2 = self.client.post(
             f"/api/contacts/{contact_id}/activities",
-            json={"type": "meeting", "content": "Reunión de demostración del producto."},
+            json={"type": "meeting", "content": "Product demo meeting."},
             headers=headers_a,
         )
         self.assertEqual(act2.status_code, 201)
 
-        # 2. Registrar con tipo inválido -> 400
+        # 2. Register with an invalid type -> 400
         act_invalid = self.client.post(
             f"/api/contacts/{contact_id}/activities",
-            json={"type": "invalid_type", "content": "Contenido test."},
+            json={"type": "invalid_type", "content": "Test content."},
             headers=headers_a,
         )
         self.assertEqual(act_invalid.status_code, 400)
 
-        # 3. Listar timeline de actividades
+        # 3. List the activity timeline
         res_timeline = self.client.get(f"/api/contacts/{contact_id}/activities", headers=headers_a)
         self.assertEqual(res_timeline.status_code, 200)
         activities = res_timeline.get_json()["activities"]
         self.assertEqual(len(activities), 2)
-        # Debe estar ordenado de la más reciente a la más antigua
+        # It must be ordered from most recent to oldest
         self.assertEqual(activities[0]["type"], "meeting")
         self.assertEqual(activities[1]["type"], "call")
 
-        # 4. Tenant B intenta registrar actividad en contacto de Tenant A -> 404
+        # 4. Tenant B tries to register an activity on a Tenant A contact -> 404
         res_b_act = self.client.post(
             f"/api/contacts/{contact_id}/activities",
-            json={"type": "note", "content": "Espionaje industrial"},
+            json={"type": "note", "content": "Industrial espionage"},
             headers=headers_b,
         )
         self.assertEqual(res_b_act.status_code, 404)
 
-        # 5. Tenant B intenta listar actividades del contacto de Tenant A -> 404
+        # 5. Tenant B tries to list activities for the Tenant A contact -> 404
         res_b_list = self.client.get(f"/api/contacts/{contact_id}/activities", headers=headers_b)
         self.assertEqual(res_b_list.status_code, 404)
 
-        # 6. Borrar contacto y verificar cascada de actividades
+        # 6. Delete the contact and verify the activity cascade
         res_del_contact = self.client.delete(f"/api/contacts/{contact_id}", headers=headers_a)
         self.assertEqual(res_del_contact.status_code, 200)
         self.assertEqual(ActivityLog.query.filter_by(contact_id=contact_id).count(), 0)
 
     # ==========================================
-    # TESTS PARA DASHBOARD STATS
+    # DASHBOARD STATS TESTS
     # ==========================================
     def test_dashboard_stats_counts_and_tenant_isolation(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # 1. Sin datos -> conteos en cero
+        # 1. No data -> counts are zero
         res_empty = self.client.get("/api/dashboard/stats", headers=headers_a)
         self.assertEqual(res_empty.status_code, 200)
         empty_data = res_empty.get_json()
@@ -329,43 +329,43 @@ class CRMCoreSprint1TestCase(unittest.TestCase):
         self.assertEqual(empty_data["deals_pipeline_value"], 0.0)
         self.assertEqual(empty_data["mrr_estimated"], 0.0)
 
-        # 2. Crear datos solo en Tenant A
+        # 2. Create data only in Tenant A
         for i in range(3):
-            self.client.post("/api/companies", json={"name": f"Empresa Stats {i}"}, headers=headers_a)
+            self.client.post("/api/companies", json={"name": f"Stats Company {i}"}, headers=headers_a)
         for i in range(2):
             self.client.post(
                 "/api/contacts",
-                json={"first_name": f"Contacto{i}", "last_name": "Stats"},
+                json={"first_name": f"Contact{i}", "last_name": "Stats"},
                 headers=headers_a,
             )
 
-        # Tenant B crea un registro que no debe contar para A
-        self.client.post("/api/companies", json={"name": "Empresa Tenant B"}, headers=headers_b)
+        # Tenant B creates a record that must not count for Tenant A
+        self.client.post("/api/companies", json={"name": "Tenant B Company"}, headers=headers_b)
         self.client.post(
             "/api/contacts",
-            json={"first_name": "B", "last_name": "Solamente"},
+            json={"first_name": "B", "last_name": "Only"},
             headers=headers_b,
         )
 
-        # 3. Tenant A ve sus conteos reales, aislados de B
+        # 3. Tenant A sees its real counts, isolated from Tenant B
         res_a = self.client.get("/api/dashboard/stats", headers=headers_a)
         self.assertEqual(res_a.status_code, 200)
         data_a = res_a.get_json()
         self.assertEqual(data_a["contacts_total"], 2)
         self.assertEqual(data_a["companies_total"], 3)
 
-        # 4. Tenant B ve los suyos
+        # 4. Tenant B sees its own
         res_b = self.client.get("/api/dashboard/stats", headers=headers_b)
         self.assertEqual(res_b.status_code, 200)
         data_b = res_b.get_json()
         self.assertEqual(data_b["contacts_total"], 1)
         self.assertEqual(data_b["companies_total"], 1)
 
-        # 5. Sin token -> 401
+        # 5. Without token -> 401
         res_unauth = self.client.get("/api/dashboard/stats")
         self.assertEqual(res_unauth.status_code, 401)
 
-        # 6. Borra un contacto -> el conteo de A baja a 1
+        # 6. Delete a contact -> Tenant A's count drops to 1
         contacts_res = self.client.get("/api/contacts", headers=headers_a)
         contact_id = contacts_res.get_json()["items"][0]["id"]
         self.client.delete(f"/api/contacts/{contact_id}", headers=headers_a)

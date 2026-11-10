@@ -10,10 +10,10 @@ company_bp = Blueprint("companies", __name__)
 @company_bp.route("", methods=["GET"])
 @tenant_required
 def get_companies():
-    """Lista empresas del tenant_id actual con paginación y filtro de búsqueda por nombre (?search=).
+    """Lists companies in the current workspace with pagination and name search (?search=).
 
-    Con ?all=1 se omita la paginación y se devuelven todas (máx. 1000) ordenadas por nombre,
-    pensado para selects/dropdowns.
+    With ?all=1, pagination is skipped and all companies (max 1000) are returned sorted by name,
+    intended for selects and dropdowns.
     """
     search = request.args.get("search", "").strip()
     fetch_all = request.args.get("all", "").strip() in ("1", "true", "True")
@@ -66,13 +66,13 @@ def get_companies():
 @company_bp.route("", methods=["POST"])
 @tenant_required
 def create_company():
-    """Crea una empresa asociada al tenant_id en sesión."""
+    """Creates a company associated with the current workspace."""
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
 
     if not name:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'name' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'name' field is required."}),
             400,
         )
 
@@ -92,7 +92,7 @@ def create_company():
         return (
             jsonify(
                 {
-                    "message": "Empresa creada exitosamente.",
+                    "message": "Company created successfully.",
                     "company": company.to_dict(),
                 }
             ),
@@ -101,7 +101,7 @@ def create_company():
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo crear la empresa: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not create the company: {str(exc)}"}),
             500,
         )
 
@@ -109,11 +109,11 @@ def create_company():
 @company_bp.route("/<string:company_id>", methods=["GET"])
 @tenant_required
 def get_company(company_id):
-    """Obtiene el detalle de una empresa con sus contactos asociados."""
+    """Returns a company's details together with its associated contacts."""
     company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()
     if not company:
         return (
-            jsonify({"error": "No encontrado", "message": "Empresa no encontrada en su organización."}),
+            jsonify({"error": "Not found", "message": "Company not found in your organization."}),
             404,
         )
 
@@ -123,11 +123,11 @@ def get_company(company_id):
 @company_bp.route("/<string:company_id>", methods=["PUT"])
 @tenant_required
 def update_company(company_id):
-    """Actualiza los datos de la empresa."""
+    """Updates the company's details."""
     company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()
     if not company:
         return (
-            jsonify({"error": "No encontrado", "message": "Empresa no encontrada en su organización."}),
+            jsonify({"error": "Not found", "message": "Company not found in your organization."}),
             404,
         )
 
@@ -137,7 +137,7 @@ def update_company(company_id):
         name = name.strip()
         if not name:
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'name' no puede estar vacío."}),
+                jsonify({"error": "Validation failed", "message": "The 'name' field cannot be empty."}),
                 400,
             )
         company.name = name
@@ -158,7 +158,7 @@ def update_company(company_id):
         return (
             jsonify(
                 {
-                    "message": "Empresa actualizada exitosamente.",
+                    "message": "Company updated successfully.",
                     "company": company.to_dict(),
                 }
             ),
@@ -167,7 +167,7 @@ def update_company(company_id):
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo actualizar la empresa: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not update the company: {str(exc)}"}),
             500,
         )
 
@@ -176,21 +176,21 @@ def update_company(company_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_company(company_id):
-    """Elimina la empresa asegurando aislamiento de Tenant."""
+    """Deletes the company while enforcing workspace isolation."""
     company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()
     if not company:
         return (
-            jsonify({"error": "No encontrado", "message": "Empresa no encontrada en su organización."}),
+            jsonify({"error": "Not found", "message": "Company not found in your organization."}),
             404,
         )
 
     try:
         db.session.delete(company)
         db.session.commit()
-        return jsonify({"message": "Empresa eliminada exitosamente."}), 200
+        return jsonify({"message": "Company deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo eliminar la empresa: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not delete the company: {str(exc)}"}),
             500,
         )

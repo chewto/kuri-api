@@ -16,7 +16,7 @@ VALID_TRANSACTION_TYPES = {"income", "expense"}
 @transaction_bp.route("", methods=["GET"])
 @tenant_required
 def get_transactions():
-    """Lista transacciones con filtros por type, rango de fechas (start_date, end_date), category_id, company_id y paginación."""
+    """Lists transactions with filters by type, date range (start_date, end_date), category_id, company_id, and pagination."""
     tx_type = request.args.get("type", "").strip().lower()
     start_date_str = request.args.get("start_date", "").strip()
     end_date_str = request.args.get("end_date", "").strip()
@@ -31,8 +31,8 @@ def get_transactions():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Tipo inválido. Opciones: {', '.join(sorted(VALID_TRANSACTION_TYPES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid type. Options: {', '.join(sorted(VALID_TRANSACTION_TYPES))}",
                     }
                 ),
                 400,
@@ -47,8 +47,8 @@ def get_transactions():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "Formato de 'start_date' inválido. Use YYYY-MM-DD.",
+                        "error": "Validation failed",
+                        "message": "Invalid 'start_date' format. Use YYYY-MM-DD.",
                     }
                 ),
                 400,
@@ -62,8 +62,8 @@ def get_transactions():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "Formato de 'end_date' inválido. Use YYYY-MM-DD.",
+                        "error": "Validation failed",
+                        "message": "Invalid 'end_date' format. Use YYYY-MM-DD.",
                     }
                 ),
                 400,
@@ -119,7 +119,7 @@ def get_transactions():
 @transaction_bp.route("", methods=["POST"])
 @tenant_required
 def create_transaction():
-    """Registra un nuevo movimiento de caja (ingreso o egreso)."""
+    """Creates a new cash movement (income or expense)."""
     data = request.get_json(silent=True) or {}
 
     tx_type = str(data.get("type", "")).strip().lower()
@@ -127,8 +127,8 @@ def create_transaction():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": f"El campo 'type' es requerido ({', '.join(sorted(VALID_TRANSACTION_TYPES))}).",
+                    "error": "Validation failed",
+                    "message": f"The 'type' field is required ({', '.join(sorted(VALID_TRANSACTION_TYPES))}).",
                 }
             ),
             400,
@@ -137,7 +137,7 @@ def create_transaction():
     amount_val = data.get("amount")
     if amount_val is None:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'amount' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'amount' field is required."}),
             400,
         )
     try:
@@ -148,8 +148,8 @@ def create_transaction():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'amount' debe ser un número decimal mayor a 0.",
+                    "error": "Validation failed",
+                    "message": "The 'amount' field must be a decimal number greater than 0.",
                 }
             ),
             400,
@@ -158,14 +158,14 @@ def create_transaction():
     description = data.get("description", "").strip()
     if not description:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'description' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'description' field is required."}),
             400,
         )
 
     date_str = data.get("date")
     if not date_str:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'date' (YYYY-MM-DD) es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'date' field (YYYY-MM-DD) is required."}),
             400,
         )
     try:
@@ -174,14 +174,14 @@ def create_transaction():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "Formato de 'date' inválido. Use YYYY-MM-DD.",
+                    "error": "Validation failed",
+                    "message": "Invalid 'date' format. Use YYYY-MM-DD.",
                 }
             ),
             400,
         )
 
-    # Validar categoría si se proporciona
+    # Validate the category when provided
     category_id = data.get("category_id")
     if category_id:
         category_id = str(category_id).strip()
@@ -190,8 +190,8 @@ def create_transaction():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La categoría especificada no existe en su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified category does not exist in your organization.",
                     }
                 ),
                 400,
@@ -199,7 +199,7 @@ def create_transaction():
     else:
         category_id = None
 
-    # Validar empresa/cliente si se proporciona
+    # Validate the company/client when provided
     company_id = data.get("company_id")
     if company_id:
         company_id = str(company_id).strip()
@@ -208,8 +208,8 @@ def create_transaction():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La empresa especificada no existe en su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified company does not exist in your organization.",
                     }
                 ),
                 400,
@@ -233,7 +233,7 @@ def create_transaction():
         return (
             jsonify(
                 {
-                    "message": "Transacción registrada exitosamente.",
+                    "message": "Transaction created successfully.",
                     "transaction": transaction.to_dict(),
                 }
             ),
@@ -244,8 +244,8 @@ def create_transaction():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo registrar la transacción: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not create the transaction: {str(exc)}",
                 }
             ),
             500,
@@ -256,14 +256,14 @@ def create_transaction():
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_transaction(transaction_id):
-    """Elimina una transacción garantizando aislamiento de Tenant."""
+    """Deletes a transaction while enforcing workspace isolation."""
     transaction = Transaction.query.filter_by(id=transaction_id, tenant_id=g.tenant_id).first()
     if not transaction:
         return (
             jsonify(
                 {
-                    "error": "No encontrado",
-                    "message": "Transacción no encontrada en su organización.",
+                    "error": "Not found",
+                    "message": "Transaction not found in your organization.",
                 }
             ),
             404,
@@ -272,14 +272,14 @@ def delete_transaction(transaction_id):
     try:
         db.session.delete(transaction)
         db.session.commit()
-        return jsonify({"message": "Transacción eliminada exitosamente."}), 200
+        return jsonify({"message": "Transaction deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo eliminar la transacción: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not delete the transaction: {str(exc)}",
                 }
             ),
             500,

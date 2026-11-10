@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Category(db.Model):
-    """Modelo de Categoría de Gastos perteneciente a un Tenant específico."""
+    """Expense category belonging to a specific workspace."""
 
     __tablename__ = "categories"
 
@@ -23,7 +23,7 @@ class Category(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
 
     def __repr__(self):

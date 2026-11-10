@@ -19,7 +19,7 @@ from app.routes.analytics import analytics_bp
 
 
 def create_app(config_name=None):
-    """Application Factory para crear y configurar la aplicación Flask."""
+    """Application factory that creates and configures the Flask application."""
     if config_name is None:
         config_name = os.getenv("FLASK_ENV", "development")
 
@@ -27,12 +27,12 @@ def create_app(config_name=None):
     config_class = config_by_name.get(config_name, config_by_name["default"])
     app.config.from_object(config_class)
 
-    # Inicializar extensiones
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    # Configurar CORS permitiendo orígenes configurados
+    # Configure CORS with the allowed origins
     cors.init_app(
         app,
         resources={
@@ -45,14 +45,14 @@ def create_app(config_name=None):
         supports_credentials=True,
     )
 
-    # Manejadores de errores personalizados para JWT
+    # Custom JWT error handlers
     @jwt.unauthorized_loader
     def unauthorized_callback(callback):
         return (
             jsonify(
                 {
-                    "error": "No autorizado",
-                    "message": "Falta el token de autorización en la cabecera.",
+                    "error": "Unauthorized",
+                    "message": "Missing authorization token in the request header.",
                 }
             ),
             401,
@@ -63,8 +63,8 @@ def create_app(config_name=None):
         return (
             jsonify(
                 {
-                    "error": "Token inválido",
-                    "message": "El token proporcionado no es válido o está malformado.",
+                    "error": "Invalid token",
+                    "message": "The provided token is invalid or malformed.",
                 }
             ),
             401,
@@ -75,14 +75,14 @@ def create_app(config_name=None):
         return (
             jsonify(
                 {
-                    "error": "Token expirado",
-                    "message": "El token de autenticación ha expirado.",
+                    "error": "Token expired",
+                    "message": "The authentication token has expired.",
                 }
             ),
             401,
         )
 
-    # Registrar Blueprints
+    # Register blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(company_bp, url_prefix="/api/companies")
     app.register_blueprint(contact_bp, url_prefix="/api/contacts")
@@ -98,7 +98,7 @@ def create_app(config_name=None):
     app.register_blueprint(team_bp, url_prefix="/api/team")
     app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
 
-    # Endpoint de Health Check
+    # Health check endpoint
     @app.route("/health", methods=["GET"])
     def health_check():
         return jsonify({"status": "healthy", "service": "crm-core-api"}), 200

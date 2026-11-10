@@ -92,4 +92,14 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_categories_tenant_id'))
 
     op.drop_table('categories')
+
+    # PostgreSQL creates native ENUM types when the tables are created; Alembic
+    # does not drop them automatically during downgrade.
+    if op.get_bind().dialect.name == "postgresql":
+        for enum_name in (
+            'billing_cycle_enum',
+            'subscription_status_enum',
+            'transaction_type_enum',
+        ):
+            op.execute(f'DROP TYPE IF EXISTS {enum_name}')
     # ### end Alembic commands ###

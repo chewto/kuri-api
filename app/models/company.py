@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Company(db.Model):
-    """Modelo de Empresa cliente perteneciente a un Tenant específico."""
+    """Customer company belonging to a specific workspace."""
 
     __tablename__ = "companies"
 
@@ -27,7 +27,7 @@ class Company(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     contacts = db.relationship(
         "Contact",

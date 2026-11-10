@@ -10,7 +10,7 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/register-tenant", methods=["POST"])
 def register_tenant():
-    """Registra una nueva organización (Tenant) junto con su usuario administrador inicial (TenantAdmin)."""
+    """Registers a new workspace together with its initial administrator user (TenantAdmin)."""
     data = request.get_json(silent=True) or {}
 
     tenant_name = data.get("tenant_name", "").strip()
@@ -18,42 +18,42 @@ def register_tenant():
     password = data.get("password", "").strip()
     plan = data.get("plan", "free").strip()
 
-    # Validaciones básicas
+    # Basic validation
     if not tenant_name:
-        return jsonify({"error": "Validación fallida", "message": "El campo 'tenant_name' es requerido."}), 400
+        return jsonify({"error": "Validation failed", "message": "The 'tenant_name' field is required."}), 400
 
     if not email:
-        return jsonify({"error": "Validación fallida", "message": "El campo 'email' es requerido."}), 400
+        return jsonify({"error": "Validation failed", "message": "The 'email' field is required."}), 400
 
     if not password or len(password) < 6:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'password' es requerido y debe tener al menos 6 caracteres.",
+                    "error": "Validation failed",
+                    "message": "The 'password' field is required and must be at least 6 characters long.",
                 }
             ),
             400,
         )
 
-    # Verificar si el usuario ya existe
+    # Check whether the user already exists
     existing_user = User.query.filter_by(email=email).first()
     if existing_user:
         return (
             jsonify(
                 {
-                    "error": "Conflicto",
-                    "message": "Ya existe un usuario registrado con este correo electrónico.",
+                    "error": "Conflict",
+                    "message": "A user with this email address already exists.",
                 }
             ),
             409,
         )
 
     try:
-        # Transacción atómica: Crear Tenant + User TenantAdmin
+        # Atomic transaction: create the workspace and the TenantAdmin user
         new_tenant = Tenant(name=tenant_name, plan=plan)
         db.session.add(new_tenant)
-        db.session.flush()  # Obtener el ID asignado a new_tenant
+        db.session.flush()  # Read the ID assigned to new_tenant
 
         admin_user = User(
             tenant_id=new_tenant.id,
@@ -64,7 +64,7 @@ def register_tenant():
         db.session.add(admin_user)
         db.session.commit()
 
-        # Generar claims adicionales para el JWT
+        # Add custom JWT claims
         role_str = admin_user.role.value if isinstance(admin_user.role, UserRole) else str(admin_user.role)
         additional_claims = {
             "tenant_id": new_tenant.id,
@@ -83,7 +83,7 @@ def register_tenant():
         return (
             jsonify(
                 {
-                    "message": "Organización y usuario administrador creados exitosamente.",
+                    "message": "Organization and administrator user created successfully.",
                     "access_token": access_token,
                     "refresh_token": refresh_token,
                     "tenant": new_tenant.to_dict(),
@@ -98,8 +98,8 @@ def register_tenant():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo completar el registro: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not complete registration: {str(exc)}",
                 }
             ),
             500,
@@ -108,7 +108,7 @@ def register_tenant():
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """Autentica las credenciales de un usuario y emite tokens JWT asociados a su Tenant."""
+    """Authenticates a user's credentials and issues JWT tokens associated with their workspace."""
     data = request.get_json(silent=True) or {}
 
     email = data.get("email", "").strip().lower()
@@ -118,8 +118,8 @@ def login():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "Debe proporcionar 'email' y 'password'.",
+                    "error": "Validation failed",
+                    "message": "You must provide 'email' and 'password'.",
                 }
             ),
             400,
@@ -130,8 +130,8 @@ def login():
         return (
             jsonify(
                 {
-                    "error": "Credenciales inválidas",
-                    "message": "Correo electrónico o contraseña incorrectos.",
+                    "error": "Invalid credentials",
+                    "message": "Incorrect email or password.",
                 }
             ),
             401,
@@ -141,8 +141,8 @@ def login():
         return (
             jsonify(
                 {
-                    "error": "Cuenta inactiva",
-                    "message": "La cuenta de usuario se encuentra deshabilitada.",
+                    "error": "Inactive account",
+                    "message": "This user account is disabled.",
                 }
             ),
             403,
@@ -153,8 +153,8 @@ def login():
         return (
             jsonify(
                 {
-                    "error": "Organización inactiva",
-                    "message": "La organización asociada a esta cuenta se encuentra inactiva.",
+                    "error": "Inactive organization",
+                    "message": "The organization associated with this account is inactive.",
                 }
             ),
             403,
@@ -178,7 +178,7 @@ def login():
     return (
         jsonify(
             {
-                "message": "Inicio de sesión exitoso.",
+                "message": "Signed in successfully.",
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "user": user.to_dict(),
@@ -191,15 +191,15 @@ def login():
 @auth_bp.route("/me", methods=["GET"])
 @tenant_required
 def me():
-    """Ruta protegida por JWT y validada para el Tenant actual. Retorna el perfil completo del usuario autenticado."""
+    """JWT-protected route validated against the current workspace. Returns the authenticated user's full profile."""
     user = User.query.filter_by(id=g.current_user_id, tenant_id=g.tenant_id).first()
 
     if not user:
         return (
             jsonify(
                 {
-                    "error": "Usuario no encontrado",
-                    "message": "No se encontró el registro del usuario en el Tenant actual.",
+                    "error": "User not found",
+                    "message": "The user record was not found in the current workspace.",
                 }
             ),
             404,

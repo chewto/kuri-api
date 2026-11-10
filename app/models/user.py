@@ -6,7 +6,7 @@ from app.utils.security import hash_password, verify_password
 
 
 class UserRole(str, enum.Enum):
-    """Roles disponibles en el sistema."""
+    """Roles available in the system."""
 
     SUPER_ADMIN = "SuperAdmin"
     TENANT_ADMIN = "TenantAdmin"
@@ -15,7 +15,7 @@ class UserRole(str, enum.Enum):
 
 
 class User(db.Model):
-    """Modelo de Usuario asociado a un Tenant específico."""
+    """User belonging to a specific workspace."""
 
     __tablename__ = "users"
 
@@ -44,15 +44,15 @@ class User(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relación inversa al Tenant
+    # Inverse relationship to the workspace
     tenant = db.relationship("Tenant", back_populates="users")
 
     def set_password(self, password: str) -> None:
-        """Aplica hashing seguro y almacena la contraseña."""
+        """Hashes and stores the password securely."""
         self.password_hash = hash_password(password)
 
     def check_password(self, password: str) -> bool:
-        """Verifica la contraseña contra el hash almacenado."""
+        """Checks the plain-text password against the stored hash."""
         return verify_password(password, self.password_hash)
 
     def __repr__(self):

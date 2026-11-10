@@ -10,12 +10,12 @@ analytics_bp = Blueprint("analytics", __name__)
 
 PIPELINE_STATUSES = ("open", "won", "lost")
 UNCATEGORIZED_KEY = "__uncategorized__"
-UNCATEGORIZED_NAME = "Sin categoría"
+UNCATEGORIZED_NAME = "Uncategorized"
 UNCATEGORIZED_COLOR = "#94A3B8"
 
 
 def _monthly_subscription_cost(subscription):
-    """Normaliza el costo de una suscripción a su equivalente mensual."""
+    """Normalizes a subscription cost to its monthly equivalent."""
     cost = float(subscription.cost) if subscription.cost is not None else 0.0
 
     if subscription.billing_cycle == "monthly":
@@ -28,7 +28,7 @@ def _monthly_subscription_cost(subscription):
 
 
 def _parse_period():
-    """Valida y resuelve el periodo solicitado, por defecto el mes actual."""
+    """Validates and resolves the requested period, defaulting to the current month."""
     today = date.today()
 
     raw_year = request.args.get("year")
@@ -41,8 +41,8 @@ def _parse_period():
         return None, None, (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "Los parámetros 'year' y 'month' deben ser números enteros.",
+                    "error": "Validation failed",
+                    "message": "The 'year' and 'month' parameters must be integers.",
                 }
             ),
             400,
@@ -52,8 +52,8 @@ def _parse_period():
         return None, None, (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El parámetro 'year' debe estar entre 2000 y 2100.",
+                    "error": "Validation failed",
+                    "message": "The 'year' parameter must be between 2000 and 2100.",
                 }
             ),
             400,
@@ -63,8 +63,8 @@ def _parse_period():
         return None, None, (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El parámetro 'month' debe estar entre 1 y 12.",
+                    "error": "Validation failed",
+                    "message": "The 'month' parameter must be between 1 and 12.",
                 }
             ),
             400,
@@ -76,14 +76,14 @@ def _parse_period():
 @analytics_bp.route("/profitability", methods=["GET"])
 @tenant_required
 def get_profitability():
-    """Devuelve el resumen consolidado de ingresos, OPEX, margen y pipeline.
+    """Returns the consolidated revenue, OPEX, margin, and pipeline summary.
 
-    - Ingresos: Deals en estado 'won' cuya fecha efectiva (expected_close_date o
-      created_at) cae dentro del periodo solicitado.
-    - OPEX: costo mensual normalizado de suscripciones activas + transacciones
-      de tipo 'expense' del periodo.
-    - Burn Rate: costo fijo mensual de las suscripciones activas (y su anualización).
-    - Desglose de gasto por categoría y distribución de deals por estado.
+    - Revenue: deals with status 'won' whose effective date (expected_close_date or
+      created_at) falls within the requested period.
+    - OPEX: normalized monthly cost of active subscriptions plus transactions
+      of type 'expense' for the period.
+    - Burn Rate: monthly fixed cost of active subscriptions (and its annualized value).
+    - Expense breakdown by category and deal distribution by status.
     """
     target_year, target_month, period_error = _parse_period()
     if period_error is not None:
@@ -94,7 +94,7 @@ def get_profitability():
     end_of_month = date(target_year, target_month, last_day)
 
     try:
-        # 1. Ingresos por deals ganados en el periodo.
+        # 1. Revenue from deals won during the period.
         won_deals = Deal.query.filter_by(
             tenant_id=g.tenant_id,
             status="won",
@@ -114,7 +114,7 @@ def get_profitability():
 
         won_revenue = round(won_revenue, 2)
 
-        # 2. OPEX: suscripciones activas normalizadas + transacciones del mes.
+        # 2. OPEX: normalized active subscriptions plus transactions for the month.
         active_subscriptions = Subscription.query.filter_by(
             tenant_id=g.tenant_id,
             status="active",
@@ -159,7 +159,7 @@ def get_profitability():
             round((net_margin / won_revenue) * 100, 2) if won_revenue > 0 else 0.0
         )
 
-        # 4. Desglose de gasto por categoría.
+        # 4. Expense breakdown by category.
         category_totals = {}
 
         def add_category_expense(category_id, category_name, category_color, amount):
@@ -212,7 +212,7 @@ def get_profitability():
             )
         expense_categories.sort(key=lambda item: item["amount"], reverse=True)
 
-        # 5. Distribución del pipeline por estado (todos los deals del tenant).
+        # 5. Pipeline distribution by status (all deals in the workspace).
         all_deals = Deal.query.filter_by(tenant_id=g.tenant_id).all()
         status_counts = {status: 0 for status in PIPELINE_STATUSES}
         status_values = {status: 0.0 for status in PIPELINE_STATUSES}
@@ -284,8 +284,8 @@ def get_profitability():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo calcular la rentabilidad: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not calculate profitability: {str(exc)}",
                 }
             ),
             500,
