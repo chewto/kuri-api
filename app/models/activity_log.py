@@ -5,7 +5,7 @@ from app.extensions import db
 
 
 class ActivityType(str, enum.Enum):
-    """Tipos de interacciones y notas de clientes."""
+    """Types of customer interactions and notes."""
 
     NOTE = "note"
     CALL = "call"
@@ -14,7 +14,7 @@ class ActivityType(str, enum.Enum):
 
 
 class ActivityLog(db.Model):
-    """Modelo de registro de actividades e interacciones asociadas a un Contacto."""
+    """Activity and interaction log entries associated with a contact."""
 
     __tablename__ = "activity_logs"
 
@@ -53,7 +53,7 @@ class ActivityLog(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     contact = db.relationship("Contact", back_populates="activities")
     user = db.relationship("User")

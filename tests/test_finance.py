@@ -16,7 +16,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
         self.app_context.push()
         db.create_all()
 
-        # Configurar dos Tenants para probar aislamiento Multi-Tenant estricto
+        # Set up two tenants to test strict Multi-Tenant isolation
         self.token_tenant_a = self._create_tenant_and_get_token("Tenant Finance A", "finance_a@test.com")
         self.token_tenant_b = self._create_tenant_and_get_token("Tenant Finance B", "finance_b@test.com")
 
@@ -40,37 +40,37 @@ class FinanceSprint2TestCase(unittest.TestCase):
         return {"Authorization": f"Bearer {token}"}
 
     # ==========================================
-    # TESTS PARA CATEGORIES
+    # CATEGORY TESTS
     # ==========================================
     def test_category_crud_and_isolation(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # 1. Crear categoría en Tenant A
+        # 1. Create a category in Tenant A
         res_cat = self.client.post(
             "/api/finance/categories",
-            json={"name": "Software & IA", "color": "#6366F1"},
+            json={"name": "Software & AI", "color": "#6366F1"},
             headers=headers_a,
         )
         self.assertEqual(res_cat.status_code, 201)
         cat_data = res_cat.get_json()["category"]
-        self.assertEqual(cat_data["name"], "Software & IA")
+        self.assertEqual(cat_data["name"], "Software & AI")
         self.assertEqual(cat_data["color"], "#6366F1")
         cat_a_id = cat_data["id"]
 
-        # 2. Listar categorías en Tenant A
+        # 2. List categories in Tenant A
         res_list_a = self.client.get("/api/finance/categories", headers=headers_a)
         self.assertEqual(res_list_a.status_code, 200)
         items_a = res_list_a.get_json()
         self.assertEqual(len(items_a), 1)
         self.assertEqual(items_a[0]["id"], cat_a_id)
 
-        # 3. Listar categorías en Tenant B -> Debe estar vacío (aislamiento)
+        # 3. List categories in Tenant B -> it must be empty (isolation)
         res_list_b = self.client.get("/api/finance/categories", headers=headers_b)
         self.assertEqual(res_list_b.status_code, 200)
         self.assertEqual(len(res_list_b.get_json()), 0)
 
-        # 4. Validación: nombre requerido
+        # 4. Validation: name is required
         res_invalid = self.client.post(
             "/api/finance/categories",
             json={"name": "   "},
@@ -79,28 +79,28 @@ class FinanceSprint2TestCase(unittest.TestCase):
         self.assertEqual(res_invalid.status_code, 400)
 
     # ==========================================
-    # TESTS PARA SUBSCRIPTIONS
+    # SUBSCRIPTION TESTS
     # ==========================================
     def test_subscription_crud_and_validation(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # Crear categoría y empresa en Tenant A
+        # Create a category and a company in Tenant A
         res_cat = self.client.post(
             "/api/finance/categories",
-            json={"name": "Infraestructura Cloud"},
+            json={"name": "Cloud Infrastructure"},
             headers=headers_a,
         )
         cat_id = res_cat.get_json()["category"]["id"]
 
         res_comp = self.client.post(
             "/api/companies",
-            json={"name": "Cliente AWS Corp"},
+            json={"name": "Client AWS Corp"},
             headers=headers_a,
         )
         comp_id = res_comp.get_json()["company"]["id"]
 
-        # 1. Intentar registrar suscripción en Tenant B con categoría o empresa de Tenant A -> 400
+        # 1. Tenant B tries to register a subscription with a Tenant A category or company -> 400
         res_cross_cat = self.client.post(
             "/api/finance/subscriptions",
             json={
@@ -127,7 +127,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
         )
         self.assertEqual(res_cross_comp.status_code, 400)
 
-        # 2. Registrar suscripción legítima en Tenant A
+        # 2. Register a legitimate subscription in Tenant A
         res_sub = self.client.post(
             "/api/finance/subscriptions",
             json={
@@ -146,10 +146,10 @@ class FinanceSprint2TestCase(unittest.TestCase):
         sub_id = sub_data["id"]
         self.assertEqual(sub_data["name"], "AWS Hosting")
         self.assertEqual(sub_data["cost"], 120.50)
-        self.assertEqual(sub_data["category_name"], "Infraestructura Cloud")
-        self.assertEqual(sub_data["company_name"], "Cliente AWS Corp")
+        self.assertEqual(sub_data["category_name"], "Cloud Infrastructure")
+        self.assertEqual(sub_data["company_name"], "Client AWS Corp")
 
-        # 3. Listar con filtros en Tenant A
+        # 3. List with filters in Tenant A
         res_filter_status = self.client.get("/api/finance/subscriptions?status=active", headers=headers_a)
         self.assertEqual(res_filter_status.status_code, 200)
         self.assertEqual(len(res_filter_status.get_json()), 1)
@@ -162,7 +162,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
         self.assertEqual(res_filter_paused.status_code, 200)
         self.assertEqual(len(res_filter_paused.get_json()), 0)
 
-        # 4. Tenant B intenta modificar o borrar suscripción de Tenant A -> 404
+        # 4. Tenant B tries to update or delete a Tenant A subscription -> 404
         res_b_put = self.client.put(
             f"/api/finance/subscriptions/{sub_id}",
             json={"cost": 999.0},
@@ -173,7 +173,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
         res_b_del = self.client.delete(f"/api/finance/subscriptions/{sub_id}", headers=headers_b)
         self.assertEqual(res_b_del.status_code, 404)
 
-        # 5. Modificar suscripción en Tenant A
+        # 5. Update the subscription in Tenant A
         res_put_a = self.client.put(
             f"/api/finance/subscriptions/{sub_id}",
             json={"cost": 140.0, "status": "paused"},
@@ -183,25 +183,25 @@ class FinanceSprint2TestCase(unittest.TestCase):
         self.assertEqual(res_put_a.get_json()["subscription"]["cost"], 140.0)
         self.assertEqual(res_put_a.get_json()["subscription"]["status"], "paused")
 
-        # 6. Eliminar suscripción en Tenant A
+        # 6. Delete the subscription in Tenant A
         res_del_a = self.client.delete(f"/api/finance/subscriptions/{sub_id}", headers=headers_a)
         self.assertEqual(res_del_a.status_code, 200)
         self.assertEqual(Subscription.query.filter_by(id=sub_id).count(), 0)
 
     # ==========================================
-    # TESTS PARA TRANSACTIONS
+    # TRANSACTION TESTS
     # ==========================================
     def test_transaction_crud_and_filters(self):
         headers_a = self._headers(self.token_tenant_a)
         headers_b = self._headers(self.token_tenant_b)
 
-        # 1. Registrar transacciones de prueba en Tenant A
+        # 1. Register test transactions in Tenant A
         res_tx1 = self.client.post(
             "/api/finance/transactions",
             json={
                 "type": "income",
                 "amount": 2500.0,
-                "description": "Pago desarrollo CRM Cliente X",
+                "description": "CRM development payment for Client X",
                 "date": "2026-10-10",
             },
             headers=headers_a,
@@ -214,14 +214,14 @@ class FinanceSprint2TestCase(unittest.TestCase):
             json={
                 "type": "expense",
                 "amount": 350.0,
-                "description": "Servidores y Dominio",
+                "description": "Servers and Domain",
                 "date": "2026-10-15",
             },
             headers=headers_a,
         )
         self.assertEqual(res_tx2.status_code, 201)
 
-        # 2. Listar transacciones en Tenant A y filtrar por type
+        # 2. List transactions in Tenant A and filter by type
         res_income = self.client.get("/api/finance/transactions?type=income", headers=headers_a)
         self.assertEqual(res_income.status_code, 200)
         self.assertEqual(res_income.get_json()["total"], 1)
@@ -231,31 +231,31 @@ class FinanceSprint2TestCase(unittest.TestCase):
         self.assertEqual(res_expense.status_code, 200)
         self.assertEqual(res_expense.get_json()["total"], 1)
 
-        # 3. Filtrar por rango de fechas
+        # 3. Filter by date range
         res_date_range = self.client.get(
             "/api/finance/transactions?start_date=2026-10-12&end_date=2026-10-20",
             headers=headers_a,
         )
         self.assertEqual(res_date_range.status_code, 200)
         self.assertEqual(res_date_range.get_json()["total"], 1)
-        self.assertEqual(res_date_range.get_json()["items"][0]["description"], "Servidores y Dominio")
+        self.assertEqual(res_date_range.get_json()["items"][0]["description"], "Servers and Domain")
 
-        # 4. Aislamiento: Tenant B no ve las transacciones de Tenant A
+        # 4. Isolation: Tenant B does not see Tenant A transactions
         res_b_tx = self.client.get("/api/finance/transactions", headers=headers_b)
         self.assertEqual(res_b_tx.status_code, 200)
         self.assertEqual(res_b_tx.get_json()["total"], 0)
 
-        # 5. Tenant B intenta eliminar transacción de Tenant A -> 404
+        # 5. Tenant B tries to delete a Tenant A transaction -> 404
         res_b_del = self.client.delete(f"/api/finance/transactions/{tx1_id}", headers=headers_b)
         self.assertEqual(res_b_del.status_code, 404)
 
-        # 6. Tenant A elimina su transacción
+        # 6. Tenant A deletes its transaction
         res_a_del = self.client.delete(f"/api/finance/transactions/{tx1_id}", headers=headers_a)
         self.assertEqual(res_a_del.status_code, 200)
         self.assertEqual(Transaction.query.filter_by(id=tx1_id).count(), 0)
 
     # ==========================================
-    # TESTS PARA FINANCE SUMMARY
+    # FINANCE SUMMARY TESTS
     # ==========================================
     def test_finance_summary_metrics(self):
         headers_a = self._headers(self.token_tenant_a)
@@ -263,19 +263,19 @@ class FinanceSprint2TestCase(unittest.TestCase):
 
         today = date.today()
 
-        # 1. Crear suscripciones en Tenant A:
-        # - Claude Pro: $20/mes (activo) -> aporta 20 MRR
-        # - AWS Hosting: $1200/año (activo) -> aporta 100 MRR
-        # - Zoom: $60/trimestre (activo) -> aporta 20 MRR
-        # - Heroku: $50/mes (pausado) -> no debe sumar al MRR
-        # Total MRR esperado = 20 + 100 + 20 = 140.00
+        # 1. Create subscriptions in Tenant A:
+        # - Claude Pro: $20/month (active) -> contributes 20 MRR
+        # - AWS Hosting: $1200/year (active) -> contributes 100 MRR
+        # - Zoom: $60/quarter (active) -> contributes 20 MRR
+        # - Heroku: $50/month (paused) -> must not add to MRR
+        # Expected total MRR = 20 + 100 + 20 = 140.00
         self.client.post(
             "/api/finance/subscriptions",
             json={
                 "name": "Claude Pro",
                 "cost": 20.0,
                 "billing_cycle": "monthly",
-                "next_billing_date": (today + timedelta(days=3)).isoformat(),  # Entra en 7 y 30 días
+                "next_billing_date": (today + timedelta(days=3)).isoformat(),  # Falls within 7 and 30 days
                 "status": "active",
             },
             headers=headers_a,
@@ -286,7 +286,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
                 "name": "AWS Hosting",
                 "cost": 1200.0,
                 "billing_cycle": "yearly",
-                "next_billing_date": (today + timedelta(days=15)).isoformat(),  # Entra solo en 30 días
+                "next_billing_date": (today + timedelta(days=15)).isoformat(),  # Falls only within 30 days
                 "status": "active",
             },
             headers=headers_a,
@@ -297,7 +297,7 @@ class FinanceSprint2TestCase(unittest.TestCase):
                 "name": "Zoom",
                 "cost": 60.0,
                 "billing_cycle": "quarterly",
-                "next_billing_date": (today + timedelta(days=45)).isoformat(),  # Fuera de 30 días
+                "next_billing_date": (today + timedelta(days=45)).isoformat(),  # Outside 30 days
                 "status": "active",
             },
             headers=headers_a,
@@ -314,14 +314,14 @@ class FinanceSprint2TestCase(unittest.TestCase):
             headers=headers_a,
         )
 
-        # 2. Crear transacciones del mes actual en Tenant A
+        # 2. Create transactions for the current month in Tenant A
         current_date_tx = today.isoformat()
         self.client.post(
             "/api/finance/transactions",
             json={
                 "type": "income",
                 "amount": 3000.0,
-                "description": "Venta software",
+                "description": "Software sale",
                 "date": current_date_tx,
             },
             headers=headers_a,
@@ -331,46 +331,46 @@ class FinanceSprint2TestCase(unittest.TestCase):
             json={
                 "type": "expense",
                 "amount": 800.0,
-                "description": "Gasto operacional",
+                "description": "Operating expense",
                 "date": current_date_tx,
             },
             headers=headers_a,
         )
 
-        # Transacción de un mes previo (no debe contar en el mes actual)
+        # Transaction from a previous month (must not count for the current month)
         past_date = date(today.year - 1, 1, 1).isoformat()
         self.client.post(
             "/api/finance/transactions",
             json={
                 "type": "income",
                 "amount": 50000.0,
-                "description": "Ingreso año pasado",
+                "description": "Income from last year",
                 "date": past_date,
             },
             headers=headers_a,
         )
 
-        # 3. Consultar /api/finance/summary para Tenant A
+        # 3. Fetch /api/finance/summary for Tenant A
         res_summary = self.client.get("/api/finance/summary", headers=headers_a)
         self.assertEqual(res_summary.status_code, 200)
         data = res_summary.get_json()
 
-        # MRR verificado: 20 + (1200/12) + (60/3) = 140.00
+        # Verified MRR: 20 + (1200/12) + (60/3) = 140.00
         self.assertEqual(data["monthly_expense_mrr"], 140.0)
         self.assertEqual(data["active_subscriptions_count"], 3)
 
-        # Próximos vencimientos
+        # Upcoming renewals
         self.assertEqual(data["upcoming_renewals"]["next_7_days"]["count"], 1)
         self.assertEqual(data["upcoming_renewals"]["next_7_days"]["items"][0]["name"], "Claude Pro")
 
         self.assertEqual(data["upcoming_renewals"]["next_30_days"]["count"], 2)
 
-        # Balance mes actual
+        # Current month balance
         self.assertEqual(data["current_month_balance"]["total_income"], 3000.0)
         self.assertEqual(data["current_month_balance"]["total_expenses"], 800.0)
         self.assertEqual(data["current_month_balance"]["net_balance"], 2200.0)
 
-        # 4. Comprobar aislamiento con Tenant B
+        # 4. Check isolation with Tenant B
         res_summary_b = self.client.get("/api/finance/summary", headers=headers_b)
         self.assertEqual(res_summary_b.status_code, 200)
         data_b = res_summary_b.get_json()

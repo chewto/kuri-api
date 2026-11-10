@@ -62,10 +62,10 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
     def _seed_tenant_a(self):
         tenant_id = self.tenant_a_id
 
-        category_infra = Category(tenant_id=tenant_id, name="Infraestructura", color="#6366F1")
-        category_sales = Category(tenant_id=tenant_id, name="Ventas", color="#F59E0B")
-        company = Company(tenant_id=tenant_id, name="Cliente A")
-        stage = Stage(tenant_id=tenant_id, name="Cerrado Ganado", order=1, probability=100)
+        category_infra = Category(tenant_id=tenant_id, name="Infrastructure", color="#6366F1")
+        category_sales = Category(tenant_id=tenant_id, name="Sales", color="#F59E0B")
+        company = Company(tenant_id=tenant_id, name="Client A")
+        stage = Stage(tenant_id=tenant_id, name="Closed Won", order=1, probability=100)
         db.session.add_all([category_infra, category_sales, company, stage])
         db.session.flush()
 
@@ -74,7 +74,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal octubre 1",
+                title="October deal 1",
                 value=5000.0,
                 status="won",
                 expected_close_date=date(2026, 10, 10),
@@ -83,7 +83,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal octubre 2",
+                title="October deal 2",
                 value=2000.0,
                 status="won",
                 expected_close_date=date(2026, 10, 20),
@@ -92,7 +92,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal noviembre",
+                title="November deal",
                 value=999.0,
                 status="won",
                 expected_close_date=date(2026, 11, 5),
@@ -101,7 +101,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal sin fecha esperada",
+                title="Deal without expected date",
                 value=500.0,
                 status="won",
                 expected_close_date=None,
@@ -111,7 +111,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal abierto",
+                title="Open deal",
                 value=1000.0,
                 status="open",
             ),
@@ -119,7 +119,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal perdido",
+                title="Lost deal",
                 value=500.0,
                 status="lost",
             ),
@@ -130,7 +130,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
             Subscription(
                 tenant_id=tenant_id,
                 category_id=category_infra.id,
-                name="Suscripción mensual",
+                name="Monthly subscription",
                 cost=20.0,
                 billing_cycle="monthly",
                 next_billing_date=date(2026, 11, 1),
@@ -139,7 +139,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
             Subscription(
                 tenant_id=tenant_id,
                 category_id=category_infra.id,
-                name="Suscripción anual",
+                name="Yearly subscription",
                 cost=1200.0,
                 billing_cycle="yearly",
                 next_billing_date=date(2027, 1, 1),
@@ -148,7 +148,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
             Subscription(
                 tenant_id=tenant_id,
                 category_id=category_sales.id,
-                name="Suscripción trimestral",
+                name="Quarterly subscription",
                 cost=60.0,
                 billing_cycle="quarterly",
                 next_billing_date=date(2026, 12, 1),
@@ -157,7 +157,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
             Subscription(
                 tenant_id=tenant_id,
                 category_id=category_sales.id,
-                name="Suscripción pausada",
+                name="Paused subscription",
                 cost=50.0,
                 billing_cycle="monthly",
                 next_billing_date=date(2026, 11, 1),
@@ -172,7 +172,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 category_id=category_infra.id,
                 type="expense",
                 amount=300.0,
-                description="Gasto infraestructura",
+                description="Infrastructure expense",
                 date=date(2026, 10, 12),
             ),
             Transaction(
@@ -180,7 +180,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 category_id=None,
                 type="expense",
                 amount=200.0,
-                description="Gasto sin categoría",
+                description="Uncategorized expense",
                 date=date(2026, 10, 15),
             ),
             Transaction(
@@ -188,7 +188,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 category_id=category_sales.id,
                 type="expense",
                 amount=50.0,
-                description="Gasto ventas",
+                description="Sales expense",
                 date=date(2026, 10, 18),
             ),
             Transaction(
@@ -196,7 +196,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 category_id=category_sales.id,
                 type="income",
                 amount=1000.0,
-                description="Ingreso no computable como deal",
+                description="Income not counted as a deal",
                 date=date(2026, 10, 20),
             ),
             Transaction(
@@ -204,7 +204,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 category_id=category_infra.id,
                 type="expense",
                 amount=999.0,
-                description="Gasto fuera de periodo",
+                description="Expense outside the period",
                 date=date(2026, 9, 30),
             ),
         ]
@@ -213,8 +213,8 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
 
     def _seed_tenant_b(self):
         tenant_id = self.tenant_b_id
-        company = Company(tenant_id=tenant_id, name="Cliente B")
-        stage = Stage(tenant_id=tenant_id, name="Cerrado Ganado", order=1, probability=100)
+        company = Company(tenant_id=tenant_id, name="Client B")
+        stage = Stage(tenant_id=tenant_id, name="Closed Won", order=1, probability=100)
         db.session.add_all([company, stage])
         db.session.flush()
 
@@ -223,7 +223,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
                 tenant_id=tenant_id,
                 company_id=company.id,
                 stage_id=stage.id,
-                title="Deal exclusivo B",
+                title="Exclusive deal B",
                 value=5000.0,
                 status="won",
                 expected_close_date=date(2026, 10, 12),
@@ -242,14 +242,14 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
         self.assertEqual(data["period"]["start_date"], "2026-10-01")
         self.assertEqual(data["period"]["end_date"], "2026-10-31")
 
-        # 3 deals ganados dentro del periodo: 5000 + 2000 + 500 (fallback created_at)
+        # 3 won deals within the period: 5000 + 2000 + 500 (created_at fallback)
         self.assertEqual(data["revenue"]["deals_won_total"], 7500.0)
         self.assertEqual(data["revenue"]["deals_won_count"], 3)
 
-        # Suscripciones activas: 20 + 1200/12 + 60/3 = 140
+        # Active subscriptions: 20 + 1200/12 + 60/3 = 140
         self.assertEqual(data["opex"]["subscriptions_monthly"], 140.0)
         self.assertEqual(data["opex"]["active_subscriptions_count"], 3)
-        # Gastos: 300 + 200 + 50 = 550 (income y gasto de septiembre no cuentan)
+        # Expenses: 300 + 200 + 50 = 550 (income and the September expense do not count)
         self.assertEqual(data["opex"]["transactions_expenses"], 550.0)
         self.assertEqual(data["opex"]["total"], 690.0)
 
@@ -261,13 +261,13 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
         categories = {
             item["category_name"]: item for item in data["expense_categories"]
         }
-        self.assertEqual(categories["Infraestructura"]["amount"], 420.0)
-        self.assertEqual(categories["Infraestructura"]["percentage"], 60.87)
-        self.assertEqual(categories["Ventas"]["amount"], 70.0)
-        self.assertEqual(categories["Ventas"]["percentage"], 10.14)
-        self.assertEqual(categories["Sin categoría"]["amount"], 200.0)
-        self.assertEqual(categories["Sin categoría"]["percentage"], 28.99)
-        self.assertIsNone(categories["Sin categoría"]["category_id"])
+        self.assertEqual(categories["Infrastructure"]["amount"], 420.0)
+        self.assertEqual(categories["Infrastructure"]["percentage"], 60.87)
+        self.assertEqual(categories["Sales"]["amount"], 70.0)
+        self.assertEqual(categories["Sales"]["percentage"], 10.14)
+        self.assertEqual(categories["Uncategorized"]["amount"], 200.0)
+        self.assertEqual(categories["Uncategorized"]["percentage"], 28.99)
+        self.assertIsNone(categories["Uncategorized"]["category_id"])
 
         pipeline = data["pipeline_status"]
         self.assertEqual(pipeline["open"]["count"], 1)
@@ -291,7 +291,7 @@ class AnalyticsSprint4TestCase(unittest.TestCase):
         self.assertEqual(data_b["opex"]["total"], 0.0)
         self.assertEqual(data_b["profitability"]["net_margin"], 5000.0)
 
-        # A no debe haberse contaminado con el deal de B
+        # A must not be contaminated by B's deal
         data_a = self.client.get(
             "/api/analytics/profitability?year=2026&month=10", headers=headers_a
         ).get_json()

@@ -1,9 +1,9 @@
--- Esquema PostgreSQL del CRM, generado desde las migraciones de Alembic.
--- Uso recomendado: dejar que Render ejecute `flask db upgrade` al desplegar.
--- Ejecuta este archivo solo sobre una base de datos VACÍA:
+-- PostgreSQL schema for the CRM, generated from the Alembic migrations.
+-- Recommended usage: let Render run `flask db upgrade` on deploy.
+-- Run this file only against an EMPTY database:
 --   psql "<EXTERNAL_DATABASE_URL>" -f scripts/schema_postgres.sql
--- Incluye alembic_version, por lo que después `flask db upgrade` no repetirá
--- la creación de tablas.
+-- It includes alembic_version, so a later `flask db upgrade` will not repeat
+-- table creation.
 BEGIN;
 
 CREATE TABLE alembic_version (

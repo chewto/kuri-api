@@ -11,9 +11,9 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/stats", methods=["GET"])
 @tenant_required
 def get_dashboard_stats():
-    """Devuelve los conteos reales del KPI dashboard del tenant actual.
+    """Returns the real KPI dashboard counts for the current workspace.
 
-    Deals Pipeline y MRR son placeholders (0) hasta que exista el módulo de Deals/Finanzas.
+    Pipeline deals and MRR are placeholders (0) until the Deals/Finance module exists.
     """
     try:
         contacts_total = (
@@ -30,7 +30,7 @@ def get_dashboard_stats():
         )
     except Exception as exc:
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudieron calcular las métricas: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not calculate the metrics: {str(exc)}"}),
             500,
         )
 

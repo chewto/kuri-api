@@ -5,8 +5,8 @@ services:
     region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    # Plan free: las migraciones se aplican al iniciar. preDeployCommand solo
-    # está disponible en planes pagados. Si pasas a uno, usa:
+    # Free plan: migrations run at startup. preDeployCommand is only
+    # available on paid plans. If you upgrade, use:
     #   preDeployCommand: "flask db upgrade"
     #   startCommand: "gunicorn wsgi:app"
     startCommand: "flask db upgrade && gunicorn wsgi:app"

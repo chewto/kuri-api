@@ -17,7 +17,7 @@ VALID_STATUSES = {"active", "paused", "cancelled"}
 @subscription_bp.route("", methods=["GET"])
 @tenant_required
 def get_subscriptions():
-    """Lista suscripciones del tenant con filtros opcionales por status, category_id y company_id."""
+    """Lists workspace subscriptions with optional filters by status, category_id, and company_id."""
     status = request.args.get("status", "").strip()
     category_id = request.args.get("category_id", "").strip()
     company_id = request.args.get("company_id", "").strip()
@@ -29,8 +29,8 @@ def get_subscriptions():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Estado inválido. Opciones válidas: {', '.join(sorted(VALID_STATUSES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid status. Valid options: {', '.join(sorted(VALID_STATUSES))}",
                     }
                 ),
                 400,
@@ -50,21 +50,21 @@ def get_subscriptions():
 @subscription_bp.route("", methods=["POST"])
 @tenant_required
 def create_subscription():
-    """Registra una nueva suscripción/servicio recurrente (SaaS/OPEX)."""
+    """Creates a new recurring subscription or service (SaaS/OPEX)."""
     data = request.get_json(silent=True) or {}
 
     name = data.get("name", "").strip()
     if not name:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'name' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'name' field is required."}),
             400,
         )
 
-    # Validar costo
+    # Validate cost
     cost_val = data.get("cost")
     if cost_val is None:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'cost' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'cost' field is required."}),
             400,
         )
     try:
@@ -75,34 +75,34 @@ def create_subscription():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'cost' debe ser un número decimal válido mayor o igual a 0.",
+                    "error": "Validation failed",
+                    "message": "The 'cost' field must be a valid decimal number greater than or equal to 0.",
                 }
             ),
             400,
         )
 
-    # Validar ciclo de facturación
+    # Validate billing cycle
     billing_cycle = data.get("billing_cycle", "monthly").strip().lower()
     if billing_cycle not in VALID_BILLING_CYCLES:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": f"Ciclo de facturación inválido. Opciones: {', '.join(sorted(VALID_BILLING_CYCLES))}",
+                    "error": "Validation failed",
+                    "message": f"Invalid billing cycle. Options: {', '.join(sorted(VALID_BILLING_CYCLES))}",
                 }
             ),
             400,
         )
 
-    # Validar fecha próximo cobro
+    # Validate the next billing date
     next_billing_str = data.get("next_billing_date")
     if not next_billing_str:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'next_billing_date' (YYYY-MM-DD) es requerido.",
+                    "error": "Validation failed",
+                    "message": "The 'next_billing_date' field (YYYY-MM-DD) is required.",
                 }
             ),
             400,
@@ -113,27 +113,27 @@ def create_subscription():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "Formato de 'next_billing_date' inválido. Use YYYY-MM-DD.",
+                    "error": "Validation failed",
+                    "message": "Invalid 'next_billing_date' format. Use YYYY-MM-DD.",
                 }
             ),
             400,
         )
 
-    # Validar status
+    # Validate status
     status = data.get("status", "active").strip().lower()
     if status not in VALID_STATUSES:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_STATUSES))}",
+                    "error": "Validation failed",
+                    "message": f"Invalid status. Options: {', '.join(sorted(VALID_STATUSES))}",
                 }
             ),
             400,
         )
 
-    # Validar pertenencia de company_id si fue provisto
+    # Validate company_id ownership when provided
     company_id = data.get("company_id")
     if company_id:
         company_id = str(company_id).strip()
@@ -142,8 +142,8 @@ def create_subscription():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La empresa especificada no existe en su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified company does not exist in your organization.",
                     }
                 ),
                 400,
@@ -151,7 +151,7 @@ def create_subscription():
     else:
         company_id = None
 
-    # Validar pertenencia de category_id si fue provisto
+    # Validate category_id ownership when provided
     category_id = data.get("category_id")
     if category_id:
         category_id = str(category_id).strip()
@@ -160,8 +160,8 @@ def create_subscription():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La categoría especificada no existe en su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified category does not exist in your organization.",
                     }
                 ),
                 400,
@@ -186,7 +186,7 @@ def create_subscription():
         return (
             jsonify(
                 {
-                    "message": "Suscripción registrada exitosamente.",
+                    "message": "Subscription created successfully.",
                     "subscription": subscription.to_dict(),
                 }
             ),
@@ -197,8 +197,8 @@ def create_subscription():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo registrar la suscripción: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not create the subscription: {str(exc)}",
                 }
             ),
             500,
@@ -208,14 +208,14 @@ def create_subscription():
 @subscription_bp.route("/<string:subscription_id>", methods=["PUT"])
 @tenant_required
 def update_subscription(subscription_id):
-    """Actualiza los datos o cambia el estado de una suscripción."""
+    """Updates a subscription's details or changes its status."""
     subscription = Subscription.query.filter_by(id=subscription_id, tenant_id=g.tenant_id).first()
     if not subscription:
         return (
             jsonify(
                 {
-                    "error": "No encontrado",
-                    "message": "Suscripción no encontrada en su organización.",
+                    "error": "Not found",
+                    "message": "Subscription not found in your organization.",
                 }
             ),
             404,
@@ -227,7 +227,7 @@ def update_subscription(subscription_id):
         name = str(data["name"]).strip()
         if not name:
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'name' no puede estar vacío."}),
+                jsonify({"error": "Validation failed", "message": "The 'name' field cannot be empty."}),
                 400,
             )
         subscription.name = name
@@ -242,8 +242,8 @@ def update_subscription(subscription_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "El campo 'cost' debe ser un número decimal válido mayor o igual a 0.",
+                        "error": "Validation failed",
+                        "message": "The 'cost' field must be a valid decimal number greater than or equal to 0.",
                     }
                 ),
                 400,
@@ -255,8 +255,8 @@ def update_subscription(subscription_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Ciclo de facturación inválido. Opciones: {', '.join(sorted(VALID_BILLING_CYCLES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid billing cycle. Options: {', '.join(sorted(VALID_BILLING_CYCLES))}",
                     }
                 ),
                 400,
@@ -272,8 +272,8 @@ def update_subscription(subscription_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "Formato de 'next_billing_date' inválido. Use YYYY-MM-DD.",
+                        "error": "Validation failed",
+                        "message": "Invalid 'next_billing_date' format. Use YYYY-MM-DD.",
                     }
                 ),
                 400,
@@ -285,8 +285,8 @@ def update_subscription(subscription_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_STATUSES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid status. Options: {', '.join(sorted(VALID_STATUSES))}",
                     }
                 ),
                 400,
@@ -302,8 +302,8 @@ def update_subscription(subscription_id):
                 return (
                     jsonify(
                         {
-                            "error": "Validación fallida",
-                            "message": "La empresa especificada no existe en su organización.",
+                            "error": "Validation failed",
+                            "message": "The specified company does not exist in your organization.",
                         }
                     ),
                     400,
@@ -321,8 +321,8 @@ def update_subscription(subscription_id):
                 return (
                     jsonify(
                         {
-                            "error": "Validación fallida",
-                            "message": "La categoría especificada no existe en su organización.",
+                            "error": "Validation failed",
+                            "message": "The specified category does not exist in your organization.",
                         }
                     ),
                     400,
@@ -336,7 +336,7 @@ def update_subscription(subscription_id):
         return (
             jsonify(
                 {
-                    "message": "Suscripción actualizada exitosamente.",
+                    "message": "Subscription updated successfully.",
                     "subscription": subscription.to_dict(),
                 }
             ),
@@ -347,8 +347,8 @@ def update_subscription(subscription_id):
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo actualizar la suscripción: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not update the subscription: {str(exc)}",
                 }
             ),
             500,
@@ -359,14 +359,14 @@ def update_subscription(subscription_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_subscription(subscription_id):
-    """Elimina una suscripción garantizando aislamiento de Tenant."""
+    """Deletes a subscription while enforcing workspace isolation."""
     subscription = Subscription.query.filter_by(id=subscription_id, tenant_id=g.tenant_id).first()
     if not subscription:
         return (
             jsonify(
                 {
-                    "error": "No encontrado",
-                    "message": "Suscripción no encontrada en su organización.",
+                    "error": "Not found",
+                    "message": "Subscription not found in your organization.",
                 }
             ),
             404,
@@ -375,14 +375,14 @@ def delete_subscription(subscription_id):
     try:
         db.session.delete(subscription)
         db.session.commit()
-        return jsonify({"message": "Suscripción eliminada exitosamente."}), 200
+        return jsonify({"message": "Subscription deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo eliminar la suscripción: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not delete the subscription: {str(exc)}",
                 }
             ),
             500,

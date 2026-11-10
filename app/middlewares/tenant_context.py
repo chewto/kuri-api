@@ -6,19 +6,19 @@ from app.models.user import User, UserRole
 
 
 def tenant_required(fn):
-    """Decorador para rutas protegidas que extrae y valida el contexto del Tenant desde el token JWT.
+    """Decorator for protected routes that extracts and validates the workspace context from the JWT.
 
-    1. Valida el JWT en la cabecera Authorization: Bearer <token>.
-    2. Extrae tenant_id y role desde los claims personalizados del JWT.
-    3. Asigna g.tenant_id, g.current_user_id y g.user_role en el contexto de la petición.
-    4. Verifica que el Tenant asociado exista y se encuentre activo.
-    5. Verifica que el usuario exista en ese Tenant y siga activo, exponiendo
-       g.current_user y g.current_role para el control de acceso por roles.
+    1. Validates the JWT in the Authorization: Bearer <token> header.
+    2. Extracts tenant_id and role from the JWT custom claims.
+    3. Sets g.tenant_id, g.current_user_id, and g.user_role on the request context.
+    4. Verifies that the associated workspace exists and is active.
+    5. Verifies that the user exists in that workspace and is still active,
+       exposing g.current_user and g.current_role for role-based access control.
     """
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        # Valida presencia y vigencia del JWT
+        # Validate JWT presence and validity
         verify_jwt_in_request()
 
         claims = get_jwt()
@@ -30,21 +30,21 @@ def tenant_required(fn):
             return (
                 jsonify(
                     {
-                        "error": "Aislamiento de Tenant inválido",
-                        "message": "El token provisto no incluye un identificador de Tenant válido.",
+                        "error": "Invalid workspace isolation",
+                        "message": "The provided token does not include a valid workspace identifier.",
                     }
                 ),
                 403,
             )
 
-        # Validar en base de datos si el tenant está activo
+        # Check in the database whether the workspace is active
         tenant = Tenant.query.filter_by(id=tenant_id).first()
         if not tenant:
             return (
                 jsonify(
                     {
-                        "error": "Tenant no encontrado",
-                        "message": "La organización solicitada no existe.",
+                        "error": "Workspace not found",
+                        "message": "The requested organization does not exist.",
                     }
                 ),
                 404,
@@ -54,23 +54,23 @@ def tenant_required(fn):
             return (
                 jsonify(
                     {
-                        "error": "Tenant suspendido",
-                        "message": "La organización asociada se encuentra inactiva.",
+                        "error": "Workspace suspended",
+                        "message": "The associated organization is inactive.",
                     }
                 ),
                 403,
             )
 
-        # Validar que el usuario autenticado pertenezca al tenant y siga activo.
-        # Esto permite revocar el acceso de inmediato al desactivar a un miembro
-        # sin esperar a que expire su token JWT.
+        # Verify that the authenticated user belongs to the workspace and is active.
+        # This allows access to be revoked immediately when a member is deactivated
+        # without waiting for the JWT to expire.
         user = User.query.filter_by(id=user_id, tenant_id=tenant_id).first()
         if not user:
             return (
                 jsonify(
                     {
-                        "error": "Usuario no válido",
-                        "message": "El usuario del token no existe en el Tenant actual.",
+                        "error": "Invalid user",
+                        "message": "The user in the token does not exist in the current workspace.",
                     }
                 ),
                 401,
@@ -80,14 +80,14 @@ def tenant_required(fn):
             return (
                 jsonify(
                     {
-                        "error": "Cuenta inactiva",
-                        "message": "La cuenta de usuario se encuentra deshabilitada.",
+                        "error": "Inactive account",
+                        "message": "This user account is disabled.",
                     }
                 ),
                 403,
             )
 
-        # Inyectar al contexto global de la solicitud Flask
+        # Inject into Flask's global request context
         g.tenant_id = tenant_id
         g.tenant = tenant
         g.current_user_id = user_id

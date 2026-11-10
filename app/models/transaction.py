@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Transaction(db.Model):
-    """Modelo de Transacción financiera (movimientos de ingresos y egresos de caja)."""
+    """Financial transaction (cash inflow and outflow movements)."""
 
     __tablename__ = "transactions"
 
@@ -40,7 +40,7 @@ class Transaction(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
     category = db.relationship("Category", backref=db.backref("transactions", lazy="dynamic"))
     company = db.relationship("Company", backref=db.backref("transactions", lazy="dynamic"))

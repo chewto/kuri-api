@@ -60,7 +60,7 @@ class CRMCoreAPITestCase(unittest.TestCase):
         self.assertEqual(res2.status_code, 409)
 
     def test_login_and_me_profile(self):
-        # 1. Registrar
+        # 1. Register
         register_payload = {
             "tenant_name": "Stark Industries",
             "email": "tony@stark.com",
@@ -81,11 +81,11 @@ class CRMCoreAPITestCase(unittest.TestCase):
         self.assertIsNotNone(token)
         self.assertEqual(login_data["user"]["email"], "tony@stark.com")
 
-        # 3. GET /api/auth/me sin token -> 401
+        # 3. GET /api/auth/me without token -> 401
         me_unauth = self.client.get("/api/auth/me")
         self.assertEqual(me_unauth.status_code, 401)
 
-        # 4. GET /api/auth/me con Bearer token -> 200 y validación de contexto
+        # 4. GET /api/auth/me with Bearer token -> 200 and context validation
         headers = {"Authorization": f"Bearer {token}"}
         me_auth = self.client.get("/api/auth/me", headers=headers)
         self.assertEqual(me_auth.status_code, 200)

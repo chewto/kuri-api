@@ -4,7 +4,7 @@ from app.extensions import db
 
 
 class Deal(db.Model):
-    """Modelo de Oportunidad de Negocio (Deal) perteneciente a un Tenant."""
+    """Sales opportunity (deal) belonging to a workspace."""
 
     __tablename__ = "deals"
 
@@ -47,11 +47,11 @@ class Deal(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones
+    # Relationships
     tenant = db.relationship("Tenant")
-    # PostgreSQL aplica ON DELETE CASCADE sobre companies -> deals. Con
-    # passive_deletes se evita que el ORM intente poner company_id=NULL en una
-    # columna NOT NULL antes de que actúe la FK.
+    # PostgreSQL applies ON DELETE CASCADE from companies to deals. With
+    # passive_deletes, the ORM does not try to set company_id=NULL on a
+    # NOT NULL column before the FK takes effect.
     company = db.relationship(
         "Company",
         backref=db.backref("deals", lazy="dynamic", passive_deletes=True),

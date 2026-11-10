@@ -12,16 +12,16 @@ finance_summary_bp = Blueprint("finance_summary", __name__)
 @finance_summary_bp.route("", methods=["GET"])
 @tenant_required
 def get_finance_summary():
-    """Devuelve las métricas financieras consolidadas del tenant actual:
+    """Returns the consolidated financial metrics for the current workspace:
 
-    - MRR de gastos fijos mensuales en suscripciones activas (normalizado).
-    - Próximos vencimientos de suscripciones en los próximos 7 y 30 días.
-    - Balance total de transacciones del mes actual (Total Ingresos, Total Gastos, Balance Neto).
+    - Monthly recurring fixed expenses from active subscriptions (normalized).
+    - Upcoming subscription renewals in the next 7 and 30 days.
+    - Total transaction balance for the current month (total income, total expenses, net balance).
     """
     today = date.today()
 
     try:
-        # 1. Total de gasto fijo mensual en suscripciones (MRR de gastos)
+        # 1. Total monthly fixed subscription expense (expense MRR)
         active_subscriptions = (
             Subscription.query.filter_by(tenant_id=g.tenant_id, status="active").all()
         )
@@ -38,7 +38,7 @@ def get_finance_summary():
 
         monthly_expense_mrr = round(monthly_expense_mrr, 2)
 
-        # 2. Próximos vencimientos de suscripciones en 7 y 30 días
+        # 2. Upcoming subscription renewals in 7 and 30 days
         limit_7_days = today + timedelta(days=7)
         limit_30_days = today + timedelta(days=30)
 
@@ -47,7 +47,7 @@ def get_finance_summary():
             for sub in active_subscriptions
             if today <= sub.next_billing_date <= limit_7_days
         ]
-        # Ordenar por fecha de cobro ascendente
+        # Sort by billing date ascending
         upcoming_7_days.sort(key=lambda s: s["next_billing_date"])
 
         upcoming_30_days = [
@@ -57,7 +57,7 @@ def get_finance_summary():
         ]
         upcoming_30_days.sort(key=lambda s: s["next_billing_date"])
 
-        # 3. Balance de transacciones del mes actual
+        # 3. Transaction balance for the current month
         start_of_month = date(today.year, today.month, 1)
         _, last_day = monthrange(today.year, today.month)
         end_of_month = date(today.year, today.month, last_day)
@@ -112,8 +112,8 @@ def get_finance_summary():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo calcular el resumen financiero: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not calculate the financial summary: {str(exc)}",
                 }
             ),
             500,

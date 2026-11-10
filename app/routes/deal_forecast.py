@@ -11,17 +11,17 @@ deal_forecast_bp = Blueprint("deal_forecast", __name__)
 @deal_forecast_bp.route("", methods=["GET"])
 @tenant_required
 def get_deal_forecast():
-    """Devuelve métricas comerciales y proyecciones de ventas (Forecast) del tenant:
+    """Returns sales metrics and forecast projections for the workspace:
 
-    - Valor total en Pipeline Abierto (open deals).
-    - Valor total de Negocios Ganados (won deals) en el mes actual.
-    - Valor Ponderado total (Suma de valor * probabilidad de etapa).
-    - Desglose por etapas con conteo y métricas valorizadas.
-    - Conteo general de tratos por estado.
+    - Total value in the open pipeline (open deals).
+    - Total value of won deals in the current month.
+    - Total weighted value (deal value * stage probability).
+    - Per-stage breakdown with counts and value metrics.
+    - Overall deal count by status.
     """
     today = date.today()
 
-    # Opcional: permitir filtrar mes/año para el cálculo de negocios ganados
+    # Optional: allow filtering by month/year when calculating won deals
     try:
         target_year = int(request.args.get("year", today.year))
         target_month = int(request.args.get("month", today.month))
@@ -33,7 +33,7 @@ def get_deal_forecast():
     _, last_day = monthrange(target_year, target_month)
     end_of_month = date(target_year, target_month, last_day)
 
-    # 1. Obtener etapas del tenant
+    # 1. Fetch the workspace stages
     stages = (
         Stage.query.filter_by(tenant_id=g.tenant_id)
         .order_by(Stage.order.asc())
@@ -42,7 +42,7 @@ def get_deal_forecast():
 
     stage_map = {s.id: s for s in stages}
 
-    # 2. Obtener todos los tratos del tenant
+    # 2. Fetch all deals in the workspace
     deals = Deal.query.filter_by(tenant_id=g.tenant_id).all()
 
     total_open_value = 0.0
@@ -53,7 +53,7 @@ def get_deal_forecast():
     won_deals_count = 0
     lost_deals_count = 0
 
-    # Inicializar breakdown por etapa
+    # Initialize the per-stage breakdown
     stage_breakdown_dict = {}
     for stage in stages:
         stage_breakdown_dict[stage.id] = {
@@ -73,7 +73,7 @@ def get_deal_forecast():
             open_deals_count += 1
             total_open_value += val
 
-            # Cálculo ponderado según probabilidad de la etapa
+            # Weighted calculation based on stage probability
             deal_stage = stage_map.get(deal.stage_id)
             prob = deal_stage.probability if deal_stage else 100
             weighted_val = val * (prob / 100.0)
@@ -86,8 +86,8 @@ def get_deal_forecast():
 
         elif deal.status == "won":
             won_deals_count += 1
-            # Verificar si corresponde al mes solicitado:
-            # Si tiene expected_close_date, se usa esa fecha; sino, la fecha de created_at
+            # Check whether it belongs to the requested month:
+            # Use expected_close_date when present; otherwise fall back to created_at
             deal_date = deal.expected_close_date
             if not deal_date and deal.created_at:
                 deal_date = deal.created_at.date()
@@ -98,7 +98,7 @@ def get_deal_forecast():
         elif deal.status == "lost":
             lost_deals_count += 1
 
-    # Formatear el breakdown ordenado por order
+    # Format the breakdown sorted by order
     breakdown_list = sorted(
         stage_breakdown_dict.values(),
         key=lambda item: item["order"],

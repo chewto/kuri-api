@@ -5,7 +5,7 @@ from app.models.user import UserRole
 
 
 def _normalize_role(role):
-    """Convierte un rol de enum o string a su representación canónica."""
+    """Converts an enum or string role to its canonical representation."""
     if isinstance(role, UserRole):
         return role.value
     if role is None:
@@ -14,21 +14,21 @@ def _normalize_role(role):
 
 
 def _forbidden(message):
-    return jsonify({"error": "Acceso denegado", "message": message}), 403
+    return jsonify({"error": "Access denied", "message": message}), 403
 
 
 def roles_required(*roles):
-    """Restringe el acceso a los roles indicados.
+    """Restricts access to the specified roles.
 
-    Acepta tanto una lista como roles posicionales:
+    Accepts either a list or positional roles:
         @roles_required(['TenantAdmin'])
         @roles_required('TenantAdmin', 'Auditor')
 
-    Debe aplicarse debajo de ``@tenant_required`` para que el contexto del
-    tenant y el usuario autenticado ya estén disponibles en ``g``. El claim
-    ``role`` del JWT debe estar permitido y, si el usuario fue cargado desde
-    la base de datos, su rol vigente también, evitando privilegios residuales
-    después de una degradación de rol.
+    Must be applied below ``@tenant_required`` so the tenant context and the
+    authenticated user are already available in ``g``. The JWT ``role`` claim
+    must be allowed and, if the user was loaded from the database, their
+    current role must be allowed too, preventing residual privileges after a
+    role downgrade.
     """
     if len(roles) == 1 and isinstance(roles[0], (list, tuple, set, frozenset)):
         roles = tuple(roles[0])
@@ -37,21 +37,21 @@ def roles_required(*roles):
     allowed_roles.discard(None)
 
     if not allowed_roles:
-        raise ValueError("roles_required debe recibir al menos un rol válido.")
+        raise ValueError("roles_required must receive at least one valid role.")
 
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             if getattr(g, "user_role", None) is None:
-                # Uso defensivo del decorador sin tenant_required.
+                # Defensive use of the decorator without tenant_required.
                 verify_jwt_in_request()
                 g.user_role = get_jwt().get("role")
 
             token_role = _normalize_role(g.user_role)
             if token_role not in allowed_roles:
                 return _forbidden(
-                    "Su rol no tiene permisos para realizar esta operación. "
-                    f"Roles permitidos: {', '.join(sorted(allowed_roles))}."
+                    "Your role is not allowed to perform this operation. "
+                    f"Allowed roles: {', '.join(sorted(allowed_roles))}."
                 )
 
             current_user = getattr(g, "current_user", None)
@@ -59,8 +59,8 @@ def roles_required(*roles):
                 current_role = _normalize_role(current_user.role)
                 if current_role not in allowed_roles:
                     return _forbidden(
-                        "Su rol vigente no tiene permisos para realizar esta operación. "
-                        "Inicie sesión nuevamente si su rol fue actualizado."
+                        "Your current role is not allowed to perform this operation. "
+                        "Sign in again if your role was updated."
                     )
 
             return fn(*args, **kwargs)

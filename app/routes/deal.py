@@ -17,10 +17,10 @@ VALID_DEAL_STATUSES = {"open", "won", "lost"}
 @deal_bp.route("", methods=["GET"])
 @tenant_required
 def get_deals():
-    """Lista las oportunidades de negocio del tenant con filtros opcionales.
+    """Lists the workspace deals with optional filters.
 
-    Soporta filtros por stage_id, status, company_id, contact_id, búsqueda por título (?search=),
-    agrupación por etapas para vistas Kanban (?grouped=true) y paginación.
+    Supports filters by stage_id, status, company_id, and contact_id, title search (?search=),
+    stage grouping for Kanban views (?grouped=true), and pagination.
     """
     stage_id = request.args.get("stage_id", "").strip()
     status = request.args.get("status", "").strip().lower()
@@ -30,14 +30,14 @@ def get_deals():
     grouped = request.args.get("grouped", "").strip() in ("1", "true", "True")
     fetch_all = request.args.get("all", "").strip() in ("1", "true", "True")
 
-    # Si se solicita agrupado para la vista Kanban
+    # If grouped output is requested for the Kanban view
     if grouped:
         stages = (
             Stage.query.filter_by(tenant_id=g.tenant_id)
             .order_by(Stage.order.asc())
             .all()
         )
-        # Consultar todos los tratos del tenant
+        # Query all deals in the workspace
         deals_query = Deal.query.filter_by(tenant_id=g.tenant_id)
         if status:
             if status in VALID_DEAL_STATUSES:
@@ -73,8 +73,8 @@ def get_deals():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_DEAL_STATUSES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid status. Options: {', '.join(sorted(VALID_DEAL_STATUSES))}",
                     }
                 ),
                 400,
@@ -134,11 +134,11 @@ def get_deals():
 @deal_bp.route("/<deal_id>", methods=["GET"])
 @tenant_required
 def get_deal(deal_id):
-    """Obtiene el detalle de un trato perteneciente al tenant."""
+    """Returns the details of a deal belonging to the workspace."""
     deal = Deal.query.filter_by(id=deal_id, tenant_id=g.tenant_id).first()
     if not deal:
         return (
-            jsonify({"error": "No encontrado", "message": "El trato solicitado no existe."}),
+            jsonify({"error": "Not found", "message": "The requested deal does not exist."}),
             404,
         )
     return jsonify(deal.to_dict()), 200
@@ -147,31 +147,31 @@ def get_deal(deal_id):
 @deal_bp.route("", methods=["POST"])
 @tenant_required
 def create_deal():
-    """Registra una nueva oportunidad de venta asociada a una Empresa y Contacto."""
+    """Creates a new sales opportunity associated with a company and contact."""
     data = request.get_json(silent=True) or {}
 
     title = str(data.get("title", "")).strip()
     if not title:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'title' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'title' field is required."}),
             400,
         )
 
     company_id = str(data.get("company_id", "")).strip()
     if not company_id:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'company_id' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'company_id' field is required."}),
             400,
         )
 
-    # Validar que la empresa pertenezca al tenant
+    # Verify that the company belongs to the workspace
     company = Company.query.filter_by(id=company_id, tenant_id=g.tenant_id).first()
     if not company:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "La empresa especificada no existe o no pertenece a su organización.",
+                    "error": "Validation failed",
+                    "message": "The specified company does not exist or does not belong to your organization.",
                 }
             ),
             400,
@@ -180,24 +180,24 @@ def create_deal():
     stage_id = str(data.get("stage_id", "")).strip()
     if not stage_id:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'stage_id' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'stage_id' field is required."}),
             400,
         )
 
-    # Validar que la etapa pertenezca al tenant
+    # Verify that the stage belongs to the workspace
     stage = Stage.query.filter_by(id=stage_id, tenant_id=g.tenant_id).first()
     if not stage:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "La etapa especificada no existe o no pertenece a su organización.",
+                    "error": "Validation failed",
+                    "message": "The specified stage does not exist or does not belong to your organization.",
                 }
             ),
             400,
         )
 
-    # Validar contacto opcional
+    # Validate the optional contact
     contact_id = data.get("contact_id")
     if contact_id:
         contact_id = str(contact_id).strip()
@@ -206,8 +206,8 @@ def create_deal():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "El contacto especificado no existe o no pertenece a su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified contact does not exist or does not belong to your organization.",
                     }
                 ),
                 400,
@@ -215,11 +215,11 @@ def create_deal():
     else:
         contact_id = None
 
-    # Validar monto value
+    # Validate the value amount
     value_raw = data.get("value")
     if value_raw is None:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'value' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'value' field is required."}),
             400,
         )
     try:
@@ -230,27 +230,27 @@ def create_deal():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'value' debe ser un número decimal mayor o igual a 0.",
+                    "error": "Validation failed",
+                    "message": "The 'value' field must be a decimal number greater than or equal to 0.",
                 }
             ),
             400,
         )
 
-    # Validar status
+    # Validate status
     status = str(data.get("status", "open")).strip().lower()
     if status not in VALID_DEAL_STATUSES:
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_DEAL_STATUSES))}",
+                    "error": "Validation failed",
+                    "message": f"Invalid status. Options: {', '.join(sorted(VALID_DEAL_STATUSES))}",
                 }
             ),
             400,
         )
 
-    # Validar expected_close_date
+    # Validate expected_close_date
     expected_close_date = None
     date_str = data.get("expected_close_date")
     if date_str:
@@ -260,8 +260,8 @@ def create_deal():
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "Formato de 'expected_close_date' inválido. Use YYYY-MM-DD.",
+                        "error": "Validation failed",
+                        "message": "Invalid 'expected_close_date' format. Use YYYY-MM-DD.",
                     }
                 ),
                 400,
@@ -284,7 +284,7 @@ def create_deal():
         return (
             jsonify(
                 {
-                    "message": "Oportunidad de negocio creada exitosamente.",
+                    "message": "Deal created successfully.",
                     "deal": deal.to_dict(),
                 }
             ),
@@ -295,8 +295,8 @@ def create_deal():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo crear la oportunidad de negocio: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not create the deal: {str(exc)}",
                 }
             ),
             500,
@@ -306,11 +306,11 @@ def create_deal():
 @deal_bp.route("/<deal_id>", methods=["PUT"])
 @tenant_required
 def update_deal(deal_id):
-    """Actualiza la información completa de una oportunidad de venta."""
+    """Updates all fields of a sales opportunity."""
     deal = Deal.query.filter_by(id=deal_id, tenant_id=g.tenant_id).first()
     if not deal:
         return (
-            jsonify({"error": "No encontrado", "message": "El trato solicitado no existe."}),
+            jsonify({"error": "Not found", "message": "The requested deal does not exist."}),
             404,
         )
 
@@ -320,7 +320,7 @@ def update_deal(deal_id):
         title = str(data["title"]).strip()
         if not title:
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'title' no puede estar vacío."}),
+                jsonify({"error": "Validation failed", "message": "The 'title' field cannot be empty."}),
                 400,
             )
         deal.title = title
@@ -332,8 +332,8 @@ def update_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La empresa especificada no existe o no pertenece a su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified company does not exist or does not belong to your organization.",
                     }
                 ),
                 400,
@@ -347,8 +347,8 @@ def update_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La etapa especificada no existe o no pertenece a su organización.",
+                        "error": "Validation failed",
+                        "message": "The specified stage does not exist or does not belong to your organization.",
                     }
                 ),
                 400,
@@ -364,8 +364,8 @@ def update_deal(deal_id):
                 return (
                     jsonify(
                         {
-                            "error": "Validación fallida",
-                            "message": "El contacto especificado no existe o no pertenece a su organización.",
+                            "error": "Validation failed",
+                            "message": "The specified contact does not exist or does not belong to your organization.",
                         }
                     ),
                     400,
@@ -384,8 +384,8 @@ def update_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "El campo 'value' debe ser un número decimal mayor o igual a 0.",
+                        "error": "Validation failed",
+                        "message": "The 'value' field must be a decimal number greater than or equal to 0.",
                     }
                 ),
                 400,
@@ -397,8 +397,8 @@ def update_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_DEAL_STATUSES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid status. Options: {', '.join(sorted(VALID_DEAL_STATUSES))}",
                     }
                 ),
                 400,
@@ -414,8 +414,8 @@ def update_deal(deal_id):
                 return (
                     jsonify(
                         {
-                            "error": "Validación fallida",
-                            "message": "Formato de 'expected_close_date' inválido. Use YYYY-MM-DD.",
+                            "error": "Validation failed",
+                            "message": "Invalid 'expected_close_date' format. Use YYYY-MM-DD.",
                         }
                     ),
                     400,
@@ -428,7 +428,7 @@ def update_deal(deal_id):
         return (
             jsonify(
                 {
-                    "message": "Oportunidad de negocio actualizada exitosamente.",
+                    "message": "Deal updated successfully.",
                     "deal": deal.to_dict(),
                 }
             ),
@@ -439,8 +439,8 @@ def update_deal(deal_id):
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo actualizar el trato: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not update the deal: {str(exc)}",
                 }
             ),
             500,
@@ -450,11 +450,11 @@ def update_deal(deal_id):
 @deal_bp.route("/<deal_id>/move", methods=["PATCH"])
 @tenant_required
 def move_deal(deal_id):
-    """Endpoint optimizado para mover un trato de etapa (stage_id) o cambiar su status (drag & drop Kanban)."""
+    """Optimized endpoint for moving a deal to another stage (stage_id) or changing its status (Kanban drag and drop)."""
     deal = Deal.query.filter_by(id=deal_id, tenant_id=g.tenant_id).first()
     if not deal:
         return (
-            jsonify({"error": "No encontrado", "message": "El trato solicitado no existe."}),
+            jsonify({"error": "Not found", "message": "The requested deal does not exist."}),
             404,
         )
 
@@ -466,8 +466,8 @@ def move_deal(deal_id):
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "Debe especificar al menos 'stage_id' o 'status' para mover el trato.",
+                    "error": "Validation failed",
+                    "message": "You must provide at least 'stage_id' or 'status' to move the deal.",
                 }
             ),
             400,
@@ -480,23 +480,23 @@ def move_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": "La etapa de destino no existe o no pertenece a su organización.",
+                        "error": "Validation failed",
+                        "message": "The target stage does not exist or does not belong to your organization.",
                     }
                 ),
                 400,
             )
         deal.stage_id = new_stage_id
 
-        # Comportamiento inteligente si no se pasó status explícito:
+        # Infer the status when none was provided explicitly:
         if not new_status:
             normalized_name = stage.name.lower()
-            if "ganado" in normalized_name or "won" in normalized_name:
+            if "won" in normalized_name:
                 deal.status = "won"
-            elif "perdido" in normalized_name or "lost" in normalized_name:
+            elif "lost" in normalized_name:
                 deal.status = "lost"
             elif deal.status in ("won", "lost"):
-                # Si regresa a una etapa intermedia de embudo
+                # If the deal moves back to an intermediate pipeline stage
                 deal.status = "open"
 
     if new_status:
@@ -505,8 +505,8 @@ def move_deal(deal_id):
             return (
                 jsonify(
                     {
-                        "error": "Validación fallida",
-                        "message": f"Estado inválido. Opciones: {', '.join(sorted(VALID_DEAL_STATUSES))}",
+                        "error": "Validation failed",
+                        "message": f"Invalid status. Options: {', '.join(sorted(VALID_DEAL_STATUSES))}",
                     }
                 ),
                 400,
@@ -518,7 +518,7 @@ def move_deal(deal_id):
         return (
             jsonify(
                 {
-                    "message": "Trato movido exitosamente.",
+                    "message": "Deal moved successfully.",
                     "deal": deal.to_dict(),
                 }
             ),
@@ -529,8 +529,8 @@ def move_deal(deal_id):
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo mover el trato: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not move the deal: {str(exc)}",
                 }
             ),
             500,
@@ -541,25 +541,25 @@ def move_deal(deal_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_deal(deal_id):
-    """Elimina una oportunidad de venta."""
+    """Deletes a sales opportunity."""
     deal = Deal.query.filter_by(id=deal_id, tenant_id=g.tenant_id).first()
     if not deal:
         return (
-            jsonify({"error": "No encontrado", "message": "El trato solicitado no existe."}),
+            jsonify({"error": "Not found", "message": "The requested deal does not exist."}),
             404,
         )
 
     try:
         db.session.delete(deal)
         db.session.commit()
-        return jsonify({"message": "Oportunidad de negocio eliminada exitosamente."}), 200
+        return jsonify({"message": "Deal deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo eliminar el trato: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not delete the deal: {str(exc)}",
                 }
             ),
             500,

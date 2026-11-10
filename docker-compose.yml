@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: crm_dev
       POSTGRES_USER: crm_user
       POSTGRES_PASSWORD: crm_password
-    # 5433 en el host para no chocar con un PostgreSQL local ya instalado.
+    # Host port 5433 avoids colliding with an already installed local PostgreSQL.
     ports:
       - "5433:5432"
     volumes:

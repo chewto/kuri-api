@@ -1,49 +1,49 @@
 # CRM Core API
 
-Backend Flask del CRM multi-tenant. Usa PostgreSQL como base de datos.
+Multi-tenant CRM backend built with Flask and PostgreSQL.
 
-## Requisitos
+## Requirements
 
-- Python 3.11 (en Render se fija con `.python-version` y `PYTHON_VERSION=3.11.11`)
-- PostgreSQL 16+ (Docker Compose o instalación local)
-- Docker Desktop (opcional, recomendado)
+- Python 3.11 (pinned in Render via `.python-version` and `PYTHON_VERSION=3.11.11`)
+- PostgreSQL 16+ (Docker Compose or a local installation)
+- Docker Desktop (optional, recommended)
 
-## Configuración local
+## Local setup
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Ajusta `DATABASE_URL` en `.env` si tus credenciales o el puerto de PostgreSQL
-no coinciden con el valor por defecto.
+Adjust `DATABASE_URL` in `.env` if your credentials or PostgreSQL port do not
+match the defaults.
 
-## PostgreSQL local
+## Local PostgreSQL
 
-### Opción A: Docker Compose
+### Option A: Docker Compose
 
 ```powershell
 docker compose up -d
 docker compose ps
 ```
 
-Esto crea:
+This creates:
 
-- Base de datos: `crm_dev`
-- Base de datos de tests: `crm_test`
-- Usuario: `crm_user`
-- Contraseña: `crm_password`
-- Puerto del host: `5433` (para no chocar con un PostgreSQL local en `5432`)
+- Development database: `crm_dev`
+- Test database: `crm_test`
+- User: `crm_user`
+- Password: `crm_password`
+- Host port: `5433` (to avoid colliding with a local PostgreSQL on `5432`)
 
-La URL resultante es:
+The resulting URL is:
 
 ```text
 postgresql://crm_user:crm_password@localhost:5433/crm_dev
 ```
 
-### Opción B: PostgreSQL ya instalado
+### Option B: Existing PostgreSQL installation
 
-Ejecuta como superusuario:
+Run as a superuser:
 
 ```sql
 CREATE ROLE crm_user LOGIN PASSWORD 'crm_password';
@@ -51,55 +51,57 @@ CREATE DATABASE crm_dev OWNER crm_user;
 CREATE DATABASE crm_test OWNER crm_user;
 ```
 
-Asegúrate de que `DATABASE_URL` en `.env` apunte a esa instancia. Si usas el
-PostgreSQL local del puerto `5432`, cambia la URL a:
+Make sure `DATABASE_URL` in `.env` points at that instance. If you use the local
+PostgreSQL on port `5432`, change the URL to:
 
 ```text
 postgresql://crm_user:crm_password@localhost:5432/crm_dev
 ```
 
-## Migraciones
+## Migrations
 
-Con PostgreSQL disponible:
+With PostgreSQL available:
 
 ```powershell
 .\.venv\Scripts\flask.exe --app wsgi db upgrade
 ```
 
-Para comprobar el estado:
+To check the current state:
 
 ```powershell
 .\.venv\Scripts\flask.exe --app wsgi db current
 ```
 
-También puedes probar el ciclo completo contra una base vacía:
+You can also validate the full cycle against an empty database:
 
 ```powershell
 .\.venv\Scripts\flask.exe --app wsgi db downgrade base
 .\.venv\Scripts\flask.exe --app wsgi db upgrade
 ```
 
-### Crear las tablas manualmente (opcional)
+### Creating the tables manually (optional)
 
-El camino recomendado es dejar que `flask db upgrade` cree el esquema. En
-Render eso ya ocurre en el arranque del servicio.
+The recommended path is to let `flask db upgrade` create the schema. On Render
+this already happens when the service starts.
 
-Si prefieres ejecutar el SQL directamente sobre una base **vacía**, el script
-generado desde las migraciones está en
+If you prefer to run the SQL directly against an **empty** database, the script
+generated from the migrations lives in
 [`scripts/schema_postgres.sql`](scripts/schema_postgres.sql):
 
 ```powershell
-psql "<EXTERNAL_DATABASE_URL_DE_RENDER>" -f scripts/schema_postgres.sql
+psql "<RENDER_EXTERNAL_DATABASE_URL>" -f scripts/schema_postgres.sql
 ```
 
-La URL externa se obtiene en Render → PostgreSQL → Connect. El script incluye
-`alembic_version` con la revisión `c38a2e1f4092`, por lo que un posterior
-`flask db upgrade` no vuelve a crear las tablas.
+You can obtain the external URL in Render → PostgreSQL → Connect. The script
+includes `alembic_version` at revision `c38a2e1f4092`, so a later
+`flask db upgrade` will not recreate the tables. The follow-up migration
+`a1b2c3d4e5f6` then renames any legacy default pipeline stages to English.
 
-No lo ejecutes si la base ya tiene tablas: en ese caso usa `flask db upgrade`
-o, si el esquema ya existe pero falta `alembic_version`, `flask db stamp head`.
+Do not run it if the database already has tables; in that case use
+`flask db upgrade`, or `flask db stamp head` when the schema exists but
+`alembic_version` is missing.
 
-## Ejecutar la API
+## Running the API
 
 ```powershell
 .\.venv\Scripts\flask.exe --app wsgi run --debug
@@ -107,45 +109,45 @@ o, si el esquema ya existe pero falta `alembic_version`, `flask db stamp head`.
 
 Health check: `http://127.0.0.1:5000/health`
 
-## Migrar datos desde SQLite
+## Migrating data from SQLite
 
-El script copia los datos de `instance/crm_dev.db` a la base PostgreSQL
-configurada en `DATABASE_URL`. **Detén la API antes de ejecutarlo.**
+The script copies data from `instance/crm_dev.db` to the PostgreSQL database
+configured in `DATABASE_URL`. **Stop the API before running it.**
 
-1. Haz una copia de seguridad del archivo SQLite.
-2. Asegúrate de que el esquema destino esté al día (`flask db upgrade`).
-3. Revisa el plan sin escribir:
+1. Back up the SQLite file.
+2. Make sure the target schema is up to date (`flask db upgrade`).
+3. Review the plan without writing:
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.migrate_sqlite_to_postgres --dry-run
 ```
 
-4. Ejecuta la copia:
+4. Run the copy:
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.migrate_sqlite_to_postgres
 ```
 
-Opciones útiles:
+Useful options:
 
-- `--reset`: vacía las tablas de dominio antes de copiar.
-- `--drop-orphans`: omite filas con FKs obligatorias inexistentes (SQLite no
-  aplicaba integridad referencial).
-- `--source` y `--target`: rutas/URLs alternativas.
+- `--reset`: clears the domain tables before copying.
+- `--drop-orphans`: skips rows whose required foreign keys do not exist
+  (SQLite did not enforce referential integrity).
+- `--source` and `--target`: alternative paths/URLs.
 
-El script convierte booleanos, fechas, timestamps (asumiendo UTC cuando no
-traen zona), montos y enums, y verifica los conteos al finalizar. No copia
-`alembic_version`.
+The script converts booleans, dates, timestamps (assuming UTC when no timezone
+is present), amounts, and enums, and verifies row counts when finished. It does
+not copy `alembic_version`.
 
 ## Tests
 
-Por defecto los tests usan SQLite en memoria:
+By default the tests use in-memory SQLite:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Para ejecutarlos contra PostgreSQL:
+To run them against PostgreSQL:
 
 ```powershell
 $env:TEST_DATABASE_URL = "postgresql://crm_user:crm_password@localhost:5433/crm_test"
@@ -153,30 +155,31 @@ $env:TEST_DATABASE_URL = "postgresql://crm_user:crm_password@localhost:5433/crm_
 Remove-Item Env:TEST_DATABASE_URL
 ```
 
-## Despliegue en Render
+## Deploying to Render
 
-`render.yaml` ya define la base PostgreSQL y ejecuta `flask db upgrade` al
-iniciar el servicio. Render free no soporta `preDeployCommand`, por eso las
-migraciones se aplican en el arranque.
+`render.yaml` already defines the PostgreSQL database and runs
+`flask db upgrade` when the service starts. Render's free tier does not support
+`preDeployCommand`, so migrations are applied at startup.
 
-Antes del primer despliegue, si la base de Render ya tuviera tablas creadas sin
-`alembic_version`, ejecuta una vez contra la URL externa de Render:
+Before the first deployment, if the Render database already has tables without
+an `alembic_version` row, run this once against the external Render URL:
 
 ```powershell
-$env:DATABASE_URL = "<External Database URL de Render>"
+$env:DATABASE_URL = "<Render External Database URL>"
 .\.venv\Scripts\flask.exe --app wsgi db stamp head
 ```
 
-Si el volumen de Docker ya existía sin la base `crm_test`, créala manualmente:
+If the Docker volume already existed without the `crm_test` database, create it
+manually:
 
 ```powershell
 docker compose exec postgres createdb -U crm_user crm_test
 ```
 
-## Estructura relevante
+## Key structure
 
-- `app/config.py`: configuración de base de datos, JWT y CORS.
-- `migrations/`: historial Alembic.
-- `scripts/migrate_sqlite_to_postgres.py`: copia de datos SQLite → PostgreSQL.
-- `docker-compose.yml`: PostgreSQL local.
-- `tests/`: suite de tests.
+- `app/config.py`: database, JWT, and CORS configuration.
+- `migrations/`: Alembic history.
+- `scripts/migrate_sqlite_to_postgres.py`: SQLite → PostgreSQL data copy.
+- `docker-compose.yml`: local PostgreSQL.
+- `tests/`: test suite.

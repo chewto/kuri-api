@@ -26,7 +26,7 @@ def _role_name(role):
 
 
 def _validate_role(role_value):
-    """Devuelve el enum de rol o None si no es asignable."""
+    """Returns the role enum, or None when the role is not assignable."""
     if not isinstance(role_value, str):
         return None
     return ASSIGNABLE_ROLES_BY_VALUE.get(role_value.strip())
@@ -35,7 +35,7 @@ def _validate_role(role_value):
 @team_bp.route("/members", methods=["GET"])
 @tenant_required
 def get_team_members():
-    """Lista todos los miembros del tenant actual, incluidos los inactivos."""
+    """Lists all members of the current workspace, including inactive ones."""
     members = (
         User.query.filter_by(tenant_id=g.tenant_id)
         .order_by(User.created_at.asc())
@@ -57,14 +57,14 @@ def get_team_members():
 @tenant_required
 @roles_required(["TenantAdmin"])
 def invite_team_member():
-    """Registra un nuevo usuario dentro del tenant con un rol inicial asignable."""
+    """Registers a new user in the workspace with an assignable initial role."""
     data = request.get_json(silent=True) or {}
     if not isinstance(data, dict):
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El cuerpo de la petición debe ser un objeto JSON.",
+                    "error": "Validation failed",
+                    "message": "The request body must be a JSON object.",
                 }
             ),
             400,
@@ -75,8 +75,8 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'email' es requerido y debe tener un formato válido.",
+                    "error": "Validation failed",
+                    "message": "The 'email' field is required and must be a valid email address.",
                 }
             ),
             400,
@@ -88,8 +88,8 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'password' es requerido y debe tener al menos 6 caracteres.",
+                    "error": "Validation failed",
+                    "message": "The 'password' field is required and must be at least 6 characters long.",
                 }
             ),
             400,
@@ -100,9 +100,9 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
+                    "error": "Validation failed",
                     "message": (
-                        "Rol inválido. Opciones permitidas: "
+                        "Invalid role. Allowed options: "
                         f"{', '.join(sorted(ASSIGNABLE_ROLE_VALUES))}."
                     ),
                 }
@@ -115,8 +115,8 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Conflicto",
-                    "message": "Ya existe un usuario registrado con este correo electrónico.",
+                    "error": "Conflict",
+                    "message": "A user with this email address already exists.",
                 }
             ),
             409,
@@ -138,8 +138,8 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Conflicto",
-                    "message": "Ya existe un usuario registrado con este correo electrónico.",
+                    "error": "Conflict",
+                    "message": "A user with this email address already exists.",
                 }
             ),
             409,
@@ -149,8 +149,8 @@ def invite_team_member():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo registrar el miembro del equipo: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not register the team member: {str(exc)}",
                 }
             ),
             500,
@@ -159,7 +159,7 @@ def invite_team_member():
     return (
         jsonify(
             {
-                "message": "Miembro del equipo registrado exitosamente.",
+                "message": "Team member registered successfully.",
                 "user": new_user.to_dict(),
             }
         ),
@@ -171,14 +171,14 @@ def invite_team_member():
 @tenant_required
 @roles_required(["TenantAdmin"])
 def update_team_member_role(member_id):
-    """Actualiza el rol de un miembro del tenant actual."""
+    """Updates a member's role in the current workspace."""
     member = User.query.filter_by(id=member_id, tenant_id=g.tenant_id).first()
     if not member:
         return (
             jsonify(
                 {
-                    "error": "No encontrado",
-                    "message": "Miembro del equipo no encontrado en su organización.",
+                    "error": "Not found",
+                    "message": "Team member not found in your organization.",
                 }
             ),
             404,
@@ -188,8 +188,8 @@ def update_team_member_role(member_id):
         return (
             jsonify(
                 {
-                    "error": "Operación no permitida",
-                    "message": "No puede cambiar su propio rol.",
+                    "error": "Operation not allowed",
+                    "message": "You cannot change your own role.",
                 }
             ),
             400,
@@ -199,8 +199,8 @@ def update_team_member_role(member_id):
         return (
             jsonify(
                 {
-                    "error": "Acceso denegado",
-                    "message": "No está permitido modificar a un SuperAdmin desde este módulo.",
+                    "error": "Access denied",
+                    "message": "SuperAdmins cannot be modified from this module.",
                 }
             ),
             403,
@@ -211,8 +211,8 @@ def update_team_member_role(member_id):
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El cuerpo de la petición debe ser un objeto JSON.",
+                    "error": "Validation failed",
+                    "message": "The request body must be a JSON object.",
                 }
             ),
             400,
@@ -223,9 +223,9 @@ def update_team_member_role(member_id):
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
+                    "error": "Validation failed",
                     "message": (
-                        "El campo 'role' es requerido. Opciones permitidas: "
+                        "The 'role' field is required. Allowed options: "
                         f"{', '.join(sorted(ASSIGNABLE_ROLE_VALUES))}."
                     ),
                 }
@@ -242,8 +242,8 @@ def update_team_member_role(member_id):
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo actualizar el rol del miembro: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not update the member role: {str(exc)}",
                 }
             ),
             500,
@@ -252,7 +252,7 @@ def update_team_member_role(member_id):
     return (
         jsonify(
             {
-                "message": "Rol del miembro actualizado exitosamente.",
+                "message": "Member role updated successfully.",
                 "user": member.to_dict(),
             }
         ),
@@ -264,14 +264,14 @@ def update_team_member_role(member_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def deactivate_team_member(member_id):
-    """Desactiva lógicamente a un miembro del tenant actual."""
+    """Soft-deactivates a member of the current workspace."""
     member = User.query.filter_by(id=member_id, tenant_id=g.tenant_id).first()
     if not member:
         return (
             jsonify(
                 {
-                    "error": "No encontrado",
-                    "message": "Miembro del equipo no encontrado en su organización.",
+                    "error": "Not found",
+                    "message": "Team member not found in your organization.",
                 }
             ),
             404,
@@ -281,8 +281,8 @@ def deactivate_team_member(member_id):
         return (
             jsonify(
                 {
-                    "error": "Operación no permitida",
-                    "message": "No puede desactivar su propia cuenta.",
+                    "error": "Operation not allowed",
+                    "message": "You cannot deactivate your own account.",
                 }
             ),
             400,
@@ -292,8 +292,8 @@ def deactivate_team_member(member_id):
         return (
             jsonify(
                 {
-                    "error": "Acceso denegado",
-                    "message": "No está permitido desactivar a un SuperAdmin desde este módulo.",
+                    "error": "Access denied",
+                    "message": "SuperAdmins cannot be deactivated from this module.",
                 }
             ),
             403,
@@ -309,8 +309,8 @@ def deactivate_team_member(member_id):
             return (
                 jsonify(
                     {
-                        "error": "Operación no permitida",
-                        "message": "No es posible desactivar al último TenantAdmin activo.",
+                        "error": "Operation not allowed",
+                        "message": "The last active TenantAdmin cannot be deactivated.",
                     }
                 ),
                 409,
@@ -326,16 +326,16 @@ def deactivate_team_member(member_id):
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo desactivar al miembro del equipo: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not deactivate the team member: {str(exc)}",
                 }
             ),
             500,
         )
 
     message = (
-        "El miembro del equipo ya se encontraba inactivo."
+        "The team member was already inactive."
         if already_inactive
-        else "Miembro del equipo desactivado exitosamente."
+        else "Team member deactivated successfully."
     )
     return jsonify({"message": message, "user": member.to_dict()}), 200

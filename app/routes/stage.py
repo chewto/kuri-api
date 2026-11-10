@@ -8,7 +8,7 @@ stage_bp = Blueprint("stages", __name__)
 
 
 def _seed_default_stages(tenant_id: str):
-    """Inicializa las etapas comerciales por defecto para el tenant si no existen."""
+    """Initializes the default sales stages for the workspace when none exist."""
     stages = []
     for item in DEFAULT_STAGES:
         stage = Stage(
@@ -26,9 +26,9 @@ def _seed_default_stages(tenant_id: str):
 @stage_bp.route("", methods=["GET"])
 @tenant_required
 def get_stages():
-    """Lista las etapas del embudo de ventas del tenant ordenadas por la columna order.
+    """Lists the workspace sales pipeline stages ordered by the order column.
 
-    Si el tenant no tiene etapas creadas, se auto-inicializan las etapas por defecto.
+    If the workspace has no stages, the default stages are initialized automatically.
     """
     stages = (
         Stage.query.filter_by(tenant_id=g.tenant_id)
@@ -45,10 +45,10 @@ def get_stages():
 @stage_bp.route("", methods=["POST"])
 @tenant_required
 def create_stage():
-    """Crea una etapa personalizada o inicializa las etapas estándar del tenant."""
+    """Creates a custom stage or initializes the workspace's standard stages."""
     data = request.get_json(silent=True) or {}
 
-    # Si se solicita inicializar por defecto
+    # If default initialization is requested
     if data.get("init_defaults") is True:
         existing = Stage.query.filter_by(tenant_id=g.tenant_id).count()
         if existing == 0:
@@ -56,7 +56,7 @@ def create_stage():
             return (
                 jsonify(
                     {
-                        "message": "Etapas estándar inicializadas exitosamente.",
+                        "message": "Default stages initialized successfully.",
                         "stages": [s.to_dict() for s in stages],
                     }
                 ),
@@ -66,7 +66,7 @@ def create_stage():
         return (
             jsonify(
                 {
-                    "message": "El tenant ya cuenta con etapas configuradas.",
+                    "message": "This workspace already has stages configured.",
                     "stages": [s.to_dict() for s in stages],
                 }
             ),
@@ -76,20 +76,20 @@ def create_stage():
     name = data.get("name", "").strip()
     if not name:
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'name' es requerido."}),
+            jsonify({"error": "Validation failed", "message": "The 'name' field is required."}),
             400,
         )
 
-    # Validar orden
+    # Validate order
     try:
         order = int(data.get("order", 1))
     except (ValueError, TypeError):
         return (
-            jsonify({"error": "Validación fallida", "message": "El campo 'order' debe ser un número entero."}),
+            jsonify({"error": "Validation failed", "message": "The 'order' field must be an integer."}),
             400,
         )
 
-    # Validar probabilidad (0 - 100)
+    # Validate probability (0 - 100)
     try:
         probability = int(data.get("probability", 100))
         if probability < 0 or probability > 100:
@@ -98,8 +98,8 @@ def create_stage():
         return (
             jsonify(
                 {
-                    "error": "Validación fallida",
-                    "message": "El campo 'probability' debe ser un entero entre 0 y 100.",
+                    "error": "Validation failed",
+                    "message": "The 'probability' field must be an integer between 0 and 100.",
                 }
             ),
             400,
@@ -118,7 +118,7 @@ def create_stage():
         return (
             jsonify(
                 {
-                    "message": "Etapa creada exitosamente.",
+                    "message": "Stage created successfully.",
                     "stage": stage.to_dict(),
                 }
             ),
@@ -129,8 +129,8 @@ def create_stage():
         return (
             jsonify(
                 {
-                    "error": "Error interno",
-                    "message": f"No se pudo crear la etapa: {str(exc)}",
+                    "error": "Internal error",
+                    "message": f"Could not create the stage: {str(exc)}",
                 }
             ),
             500,
@@ -140,11 +140,11 @@ def create_stage():
 @stage_bp.route("/<stage_id>", methods=["PUT"])
 @tenant_required
 def update_stage(stage_id):
-    """Actualiza una etapa existente del tenant."""
+    """Updates an existing workspace stage."""
     stage = Stage.query.filter_by(id=stage_id, tenant_id=g.tenant_id).first()
     if not stage:
         return (
-            jsonify({"error": "No encontrado", "message": "La etapa solicitada no existe."}),
+            jsonify({"error": "Not found", "message": "The requested stage does not exist."}),
             404,
         )
 
@@ -153,7 +153,7 @@ def update_stage(stage_id):
         name = str(data["name"]).strip()
         if not name:
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'name' no puede estar vacío."}),
+                jsonify({"error": "Validation failed", "message": "The 'name' field cannot be empty."}),
                 400,
             )
         stage.name = name
@@ -163,7 +163,7 @@ def update_stage(stage_id):
             stage.order = int(data["order"])
         except (ValueError, TypeError):
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'order' debe ser entero."}),
+                jsonify({"error": "Validation failed", "message": "The 'order' field must be an integer."}),
                 400,
             )
 
@@ -175,20 +175,20 @@ def update_stage(stage_id):
             stage.probability = prob
         except (ValueError, TypeError):
             return (
-                jsonify({"error": "Validación fallida", "message": "El campo 'probability' debe ser entre 0 y 100."}),
+                jsonify({"error": "Validation failed", "message": "The 'probability' field must be between 0 and 100."}),
                 400,
             )
 
     try:
         db.session.commit()
         return (
-            jsonify({"message": "Etapa actualizada exitosamente.", "stage": stage.to_dict()}),
+            jsonify({"message": "Stage updated successfully.", "stage": stage.to_dict()}),
             200,
         )
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo actualizar la etapa: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not update the stage: {str(exc)}"}),
             500,
         )
 
@@ -197,11 +197,11 @@ def update_stage(stage_id):
 @tenant_required
 @roles_required(["TenantAdmin"])
 def delete_stage(stage_id):
-    """Elimina una etapa si no contiene tratos vinculados."""
+    """Deletes a stage when it has no linked deals."""
     stage = Stage.query.filter_by(id=stage_id, tenant_id=g.tenant_id).first()
     if not stage:
         return (
-            jsonify({"error": "No encontrado", "message": "La etapa solicitada no existe."}),
+            jsonify({"error": "Not found", "message": "The requested stage does not exist."}),
             404,
         )
 
@@ -209,8 +209,8 @@ def delete_stage(stage_id):
         return (
             jsonify(
                 {
-                    "error": "Operación no permitida",
-                    "message": "No se puede eliminar una etapa con oportunidades de negocio asociadas. Muévalas antes.",
+                    "error": "Operation not allowed",
+                    "message": "A stage with associated deals cannot be deleted. Move them first.",
                 }
             ),
             409,
@@ -219,10 +219,10 @@ def delete_stage(stage_id):
     try:
         db.session.delete(stage)
         db.session.commit()
-        return jsonify({"message": "Etapa eliminada exitosamente."}), 200
+        return jsonify({"message": "Stage deleted successfully."}), 200
     except Exception as exc:
         db.session.rollback()
         return (
-            jsonify({"error": "Error interno", "message": f"No se pudo eliminar la etapa: {str(exc)}"}),
+            jsonify({"error": "Internal error", "message": f"Could not delete the stage: {str(exc)}"}),
             500,
         )

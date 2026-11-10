@@ -1,15 +1,15 @@
-"""Copia los datos de la base SQLite local a PostgreSQL.
+"""Copy data from the local SQLite database to PostgreSQL.
 
-Uso típico (desde la raíz del repositorio):
+Typical usage (from the repository root):
 
     python -m scripts.migrate_sqlite_to_postgres --dry-run
     python -m scripts.migrate_sqlite_to_postgres
 
-El esquema destino debe existir antes de ejecutar este script:
+The target schema must exist before running this script:
 
     flask db upgrade
 
-El script no copia ``alembic_version``: esa tabla la administra Alembic.
+The script does not copy ``alembic_version``: Alembic manages that table.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ TABLE_ORDER = [
     "deals",
 ]
 
-# columna FK -> (tabla padre, es_nullable)
+# FK column -> (parent table, is_nullable)
 FOREIGN_KEYS: dict[str, dict[str, tuple[str, bool]]] = {
     "users": {"tenant_id": ("tenants", False)},
     "companies": {"tenant_id": ("tenants", False)},
@@ -79,46 +79,46 @@ FOREIGN_KEYS: dict[str, dict[str, tuple[str, bool]]] = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Copia datos de instance/crm_dev.db (SQLite) a PostgreSQL.",
+        description="Copy data from instance/crm_dev.db (SQLite) to PostgreSQL.",
     )
     parser.add_argument(
         "--source",
         type=Path,
         default=DEFAULT_SOURCE,
-        help=f"Ruta del archivo SQLite (por defecto: {DEFAULT_SOURCE}).",
+        help=f"Path to the SQLite file (default: {DEFAULT_SOURCE}).",
     )
     parser.add_argument(
         "--target",
         default=None,
-        help="URL de PostgreSQL. Por defecto se usa DATABASE_URL.",
+        help="PostgreSQL URL. Defaults to DATABASE_URL.",
     )
     parser.add_argument(
         "--reset",
         action="store_true",
-        help="Vacía las tablas destino antes de copiar (TRUNCATE ... CASCADE).",
+        help="Truncate the target tables before copying (TRUNCATE ... CASCADE).",
     )
     parser.add_argument(
         "--drop-orphans",
         action="store_true",
-        help="Omite filas con FKs obligatorias inexistentes en lugar de abortar.",
+        help="Skip rows with missing required FKs instead of aborting.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Muestra el plan y los conteos sin escribir en PostgreSQL.",
+        help="Show the plan and counts without writing to PostgreSQL.",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=500,
-        help="Filas por lote al insertar (por defecto: 500).",
+        help="Rows per insert batch (default: 500).",
     )
     return parser.parse_args()
 
 
 def load_source_rows(source_path: Path) -> tuple[sqlite3.Connection, dict[str, list[dict[str, Any]]]]:
     if not source_path.exists():
-        raise FileNotFoundError(f"No existe el archivo SQLite: {source_path}")
+        raise FileNotFoundError(f"SQLite file does not exist: {source_path}")
 
     connection = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
@@ -132,7 +132,7 @@ def load_source_rows(source_path: Path) -> tuple[sqlite3.Connection, dict[str, l
     missing = [table for table in TABLE_ORDER if table not in tables]
     if missing:
         raise RuntimeError(
-            "La base SQLite no tiene las tablas esperadas: " + ", ".join(missing)
+            "The SQLite database is missing the expected tables: " + ", ".join(missing)
         )
 
     rows: dict[str, list[dict[str, Any]]] = {}
@@ -166,7 +166,7 @@ def prepare_rows(
     metadata: MetaData,
     drop_orphans: bool,
 ) -> tuple[dict[str, list[dict[str, Any]]], list[str], list[str]]:
-    """Convierte y valida las filas en orden de dependencias."""
+    """Convert and validate rows in dependency order."""
     prepared: dict[str, list[dict[str, Any]]] = {}
     ids_by_table: dict[str, set[str]] = {}
     warnings: list[str] = []
@@ -179,7 +179,7 @@ def prepare_rows(
         extra_columns = source_columns.difference(table.columns.keys())
         if extra_columns:
             warnings.append(
-                f"{table_name}: columnas de SQLite ignoradas: {', '.join(sorted(extra_columns))}"
+                f"{table_name}: ignored SQLite columns: {', '.join(sorted(extra_columns))}"
             )
 
         coerced_rows = [
@@ -202,33 +202,33 @@ def prepare_rows(
 
         if dropped and not drop_orphans:
             orphan_samples.extend(
-                f"{table_name}: {row.get('id', '<sin id>')}" for row in dropped[:10]
+                f"{table_name}: {row.get('id', '<no id>')}" for row in dropped[:10]
             )
 
-        # Validar valores de enums nativos de PostgreSQL.
+        # Validate native PostgreSQL enum values.
         enum_columns = table_enums(metadata, table_name)
         for row in kept:
             for column_name, allowed_values in enum_columns.items():
                 value = row.get(column_name)
                 if value is not None and value not in allowed_values:
                     raise ValueError(
-                        f"{table_name}.{column_name}={value!r} no está en el enum "
-                        f"de PostgreSQL {allowed_values}"
+                        f"{table_name}.{column_name}={value!r} is not in the PostgreSQL "
+                        f"enum {allowed_values}"
                     )
 
-        # Validar columnas NOT NULL que lleguen vacías.
+        # Validate NOT NULL columns that arrive empty.
         for row in kept:
             for column in table.columns:
                 if not column.nullable and row.get(column.name) is None:
                     raise ValueError(
-                        f"{table_name}.{column.name} es NOT NULL pero la fila "
-                        f"{row.get('id', '<sin id>')} llega vacía"
+                        f"{table_name}.{column.name} is NOT NULL but row "
+                        f"{row.get('id', '<no id>')} arrives empty"
                     )
 
         prepared[table_name] = kept
         primary_key_columns = [column.name for column in table.primary_key.columns]
         if len(primary_key_columns) != 1:
-            raise RuntimeError(f"{table_name} no tiene una PK simple.")
+            raise RuntimeError(f"{table_name} does not have a simple PK.")
         pk = primary_key_columns[0]
         ids_by_table[table_name] = {str(row[pk]) for row in kept}
 
@@ -243,7 +243,7 @@ def truncate_target(connection, metadata: MetaData) -> None:
 
 
 def main() -> int:
-    # Evita errores de encoding en consolas de Windows con code pages antiguas.
+    # Avoid encoding errors on Windows consoles with legacy code pages.
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
@@ -254,7 +254,7 @@ def main() -> int:
     target_url = args.target or os.getenv("DATABASE_URL")
     if not target_url:
         print(
-            "ERROR: define DATABASE_URL o pasa --target con la URL de PostgreSQL.",
+            "ERROR: set DATABASE_URL or pass --target with the PostgreSQL URL.",
             file=sys.stderr,
         )
         return 1
@@ -268,8 +268,8 @@ def main() -> int:
 
         if engine.dialect.name != "postgresql":
             print(
-                "ERROR: el destino debe ser PostgreSQL. "
-                f"Se recibió el dialecto '{engine.dialect.name}'.",
+                "ERROR: the target must be PostgreSQL. "
+                f"Received dialect '{engine.dialect.name}'.",
                 file=sys.stderr,
             )
             return 1
@@ -281,17 +281,17 @@ def main() -> int:
         ]
         if missing_tables:
             print(
-                "ERROR: faltan tablas en PostgreSQL: "
+                "ERROR: missing tables in PostgreSQL: "
                 + ", ".join(missing_tables)
-                + ". Ejecuta 'flask db upgrade' primero.",
+                + ". Run 'flask db upgrade' first.",
                 file=sys.stderr,
             )
             return 1
 
         if not inspect(engine).has_table("alembic_version"):
             print(
-                "ERROR: PostgreSQL no tiene la tabla alembic_version. "
-                "Ejecuta 'flask db upgrade' primero.",
+                "ERROR: PostgreSQL does not have the alembic_version table. "
+                "Run 'flask db upgrade' first.",
                 file=sys.stderr,
             )
             return 1
@@ -302,8 +302,8 @@ def main() -> int:
             ).scalar_one_or_none()
         if version is None:
             print(
-                "ERROR: PostgreSQL no tiene versión de Alembic. "
-                "Ejecuta 'flask db upgrade' primero.",
+                "ERROR: PostgreSQL has no Alembic version. "
+                "Run 'flask db upgrade' first.",
                 file=sys.stderr,
             )
             return 1
@@ -314,14 +314,14 @@ def main() -> int:
 
         if orphan_samples and not args.drop_orphans:
             print(
-                "ERROR: hay filas con FKs obligatorias que no existen en SQLite "
-                "(la integridad referencial estaba desactivada).",
+                "ERROR: some rows have required FKs that do not exist in SQLite "
+                "(referential integrity was disabled).",
                 file=sys.stderr,
             )
             for sample in orphan_samples:
                 print(f"  - {sample}", file=sys.stderr)
             print(
-                "Revisa los datos o ejecuta con --drop-orphans para omitir esas filas.",
+                "Review the data or run with --drop-orphans to skip those rows.",
                 file=sys.stderr,
             )
             return 2
@@ -336,33 +336,33 @@ def main() -> int:
         }
         if non_empty and not args.reset:
             print(
-                "ERROR: PostgreSQL ya contiene datos. Usa --reset para vaciar "
-                "las tablas antes de copiar.",
+                "ERROR: PostgreSQL already contains data. Use --reset to truncate "
+                "the tables before copying.",
                 file=sys.stderr,
             )
             for table_name, count in non_empty.items():
                 print(f"  - {table_name}: {count}", file=sys.stderr)
             return 1
 
-        print(f"Origen : {args.source}")
-        print(f"Destino: {engine.url.render_as_string(hide_password=True)}")
+        print(f"Source : {args.source}")
+        print(f"Target: {engine.url.render_as_string(hide_password=True)}")
         print(f"Alembic: {version}")
-        print("\nConteos a copiar:")
+        print("\nCounts to copy:")
         for table_name in TABLE_ORDER:
             print(
                 f"  {table_name:<15} SQLite={len(source_rows[table_name]):>5} "
-                f"-> destino={len(prepared[table_name]):>5}"
+                f"-> target={len(prepared[table_name]):>5}"
             )
 
         if warnings:
-            print(f"\nAdvertencias ({len(warnings)}):")
+            print(f"\nWarnings ({len(warnings)}):")
             for warning in warnings[:20]:
                 print(f"  - {warning}")
             if len(warnings) > 20:
-                print(f"  ... y {len(warnings) - 20} más.")
+                print(f"  ... and {len(warnings) - 20} more.")
 
         if args.dry_run:
-            print("\nDry-run: no se escribió nada en PostgreSQL.")
+            print("\nDry-run: nothing was written to PostgreSQL.")
             return 0
 
         with engine.begin() as connection:
@@ -378,7 +378,7 @@ def main() -> int:
                     connection.execute(
                         table.insert(), rows[start : start + args.batch_size]
                     )
-                print(f"Copiada {table_name}: {len(rows)} filas")
+                print(f"Copied {table_name}: {len(rows)} rows")
 
         with engine.connect() as connection:
             final_counts = target_counts(connection, metadata)
@@ -389,20 +389,20 @@ def main() -> int:
             if len(prepared[table_name]) != final_counts[table_name]
         }
         if mismatches:
-            print("\nERROR: los conteos finales no coinciden:", file=sys.stderr)
+            print("\nERROR: final counts do not match:", file=sys.stderr)
             for table_name, (expected, actual) in mismatches.items():
                 print(
-                    f"  - {table_name}: esperado {expected}, encontrado {actual}",
+                    f"  - {table_name}: expected {expected}, found {actual}",
                     file=sys.stderr,
                 )
             return 1
 
-        print("\nCopia completada correctamente.")
+        print("\nCopy completed successfully.")
         for table_name in TABLE_ORDER:
             print(f"  {table_name:<15} {final_counts[table_name]:>5}")
         return 0
 
-    except Exception as exc:  # noqa: BLE001 - reporte amigable para un CLI
+    except Exception as exc:  # noqa: BLE001 - user-friendly CLI reporting
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     finally:

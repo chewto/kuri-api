@@ -23,7 +23,7 @@ class ConversionTests(unittest.TestCase):
         self.assertIsNone(to_boolean(None))
 
         with self.assertRaises(ValueError):
-            to_boolean("quizá")
+            to_boolean("maybe")
 
     def test_naive_datetime_is_assumed_utc(self):
         value = to_datetime("2026-10-13 03:11:19.827706")

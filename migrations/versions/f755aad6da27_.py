@@ -93,8 +93,8 @@ def downgrade():
 
     op.drop_table('categories')
 
-    # PostgreSQL crea tipos ENUM nativos al crear las tablas; Alembic no los
-    # elimina automáticamente en el downgrade.
+    # PostgreSQL creates native ENUM types when the tables are created; Alembic
+    # does not drop them automatically during downgrade.
     if op.get_bind().dialect.name == "postgresql":
         for enum_name in (
             'billing_cycle_enum',

@@ -70,12 +70,12 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         res_auditor = self._invite(self.token_tenant_a, "auditor@team.test", "Auditor")
         self.assertEqual(res_auditor.status_code, 201)
 
-        # Listado del tenant con los 3 miembros (admin + 2 invitados)
+        # Tenant member list with the 3 members (admin + 2 invitees)
         res_list = self.client.get("/api/team/members", headers=headers_a)
         self.assertEqual(res_list.status_code, 200)
         self.assertEqual(res_list.get_json()["total"], 3)
 
-        # Tenant B solo ve su propio admin
+        # Tenant B only sees its own admin
         res_list_b = self.client.get("/api/team/members", headers=headers_b)
         self.assertEqual(res_list_b.status_code, 200)
         self.assertEqual(res_list_b.get_json()["total"], 1)
@@ -83,7 +83,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             res_list_b.get_json()["items"][0]["email"], "admin_b@team.test"
         )
 
-        # Validaciones de invitación
+        # Invitation validations
         self.assertEqual(
             self._invite(self.token_tenant_a, "user@team.test", "User").status_code,
             409,
@@ -107,7 +107,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             400,
         )
 
-        # Cambio de rol permitido
+        # Role change allowed
         res_role = self.client.put(
             f"/api/team/members/{user_id}/role",
             json={"role": "Auditor"},
@@ -116,7 +116,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         self.assertEqual(res_role.status_code, 200)
         self.assertEqual(res_role.get_json()["user"]["role"], "Auditor")
 
-        # Aislamiento: Tenant B no puede modificar ni desactivar a un miembro de A
+        # Isolation: Tenant B cannot update or deactivate a member of Tenant A
         res_cross_put = self.client.put(
             f"/api/team/members/{user_id}/role",
             json={"role": "User"},
@@ -145,7 +145,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         auditor_headers = self._headers(auditor_token)
         admin_headers = self._headers(self.token_tenant_a)
 
-        # Lectura permitida para roles no administrativos
+        # Read allowed for non-administrative roles
         self.assertEqual(
             self.client.get("/api/team/members", headers=user_headers).status_code,
             200,
@@ -155,7 +155,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             200,
         )
 
-        # Escrituras de equipo restringidas a TenantAdmin
+        # Team writes restricted to TenantAdmin
         self.assertEqual(
             self.client.post(
                 "/api/team/invite",
@@ -183,13 +183,13 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             403,
         )
 
-        # Crear transacción con un admin y comprobar que User/Auditor no pueden borrarla
+        # Create a transaction as an admin and verify User/Auditor cannot delete it
         res_tx = self.client.post(
             "/api/finance/transactions",
             json={
                 "type": "expense",
                 "amount": 100.0,
-                "description": "Gasto protegido",
+                "description": "Protected expense",
                 "date": "2026-10-15",
             },
             headers=admin_headers,
@@ -216,13 +216,13 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             200,
         )
 
-        # Sin token -> 401
+        # Without token -> 401
         self.assertEqual(self.client.get("/api/team/members").status_code, 401)
 
     def test_self_protection_and_immediate_revocation(self):
         headers_a = self._headers(self.token_tenant_a)
 
-        # No puede cambiarse el rol ni desactivarse a sí mismo
+        # Cannot change their own role or deactivate themselves
         self.assertEqual(
             self.client.put(
                 f"/api/team/members/{self.admin_a.id}/role",
@@ -238,7 +238,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
             400,
         )
 
-        # Segundo TenantAdmin
+        # Second TenantAdmin
         res_admin2 = self._invite(
             self.token_tenant_a, "admin2@team.test", "TenantAdmin"
         )
@@ -247,13 +247,13 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         admin2_old_token = self._login("admin2@team.test")
         admin2_old_headers = self._headers(admin2_old_token)
 
-        # Un TenantAdmin de segundo nivel puede gestionar mientras su rol vigente lo permita
+        # A second-level TenantAdmin can manage while their current role allows it
         res_invite = self._invite(self.token_tenant_a, "member@team.test", "User")
         self.assertEqual(res_invite.status_code, 201)
         member_id = res_invite.get_json()["user"]["id"]
 
-        # Degradar al segundo admin: el token antiguo conserva el claim TenantAdmin,
-        # pero el rol vigente en BD ya no permite gestionar equipo.
+        # Demote the second admin: the old token keeps the TenantAdmin claim,
+        # but the current role in the DB no longer allows team management.
         res_demote = self.client.put(
             f"/api/team/members/{admin2_id}/role",
             json={"role": "User"},
@@ -269,7 +269,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         )
         self.assertEqual(res_stale_admin.status_code, 403)
 
-        # Desactivación: el token previo deja de servir de inmediato y el login falla
+        # Deactivation: the previous token stops working immediately and login fails
         res_delete = self.client.delete(
             f"/api/team/members/{admin2_id}", headers=headers_a
         )
@@ -287,7 +287,7 @@ class TeamRBACSprint4TestCase(unittest.TestCase):
         )
         self.assertEqual(login_inactive.status_code, 403)
 
-        # El miembro desactivado sigue listado con is_active=False
+        # The deactivated member is still listed with is_active=False
         res_list = self.client.get("/api/team/members", headers=headers_a)
         members = {item["id"]: item for item in res_list.get_json()["items"]}
         self.assertFalse(members[admin2_id]["is_active"])
